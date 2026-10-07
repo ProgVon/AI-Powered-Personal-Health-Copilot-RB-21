@@ -1,0 +1,13 @@
+{
+  "frequency": {"od": 1, "qd": 1, "bd": 2, "bid": 2, "tds": 3, "tid": 3, "qid": 4, "qds": 4},
+  "slots": {
+    "morning": ["सुबह", "morning", "mane"],
+    "afternoon": ["दोपहर", "afternoon", "noon"],
+    "evening": ["शाम", "evening"],
+    "night": ["रात", "night", "nocte", "hs", "bedtime"]
+  },
+  "as_needed": ["sos", "prn", "जरूरत पड़ने पर", "ज़रूरत पड़ने पर", "as needed"],
+  "after_food": ["खाने के बाद", "after food", "after meals", "after meal", "pc"],
+  "before_food": ["खाने से पहले", "before food", "before meals", "before meal", "ac", "empty stomach"],
+  "continue": ["continue", "ongoing", "lifelong", "regular", "जारी"]
+}

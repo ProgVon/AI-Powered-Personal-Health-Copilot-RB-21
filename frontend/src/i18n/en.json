@@ -1,0 +1,20 @@
+{
+  "app": "Health Copilot", "login": "Log in", "register": "Create account", "logout": "Log out",
+  "email": "Email", "password": "Password", "name": "Full name", "dob": "Date of birth", "sex": "Sex",
+  "home": "Home", "upload": "Upload", "timeline": "Timeline", "abha": "ABHA",
+  "uploadTitle": "Upload a medical document", "uploadHint": "Drop JPG, PNG or PDF files (max 15 MB), or take a photo",
+  "reading": "Reading…", "done": "Done", "failed": "Couldn't read this document — try a clearer photo",
+  "openDoc": "Open", "tooBig": "File is too large (15 MB max)", "badType": "Only JPG, PNG or PDF files",
+  "conditions": "Conditions", "allergies": "Allergies", "currentMedicines": "Current medicines", "latestAbnormal": "Latest abnormal results",
+  "none": "None recorded", "age": "Age", "abhaLinked": "ABHA linked", "abhaNotLinked": "ABHA not linked",
+  "summary": "Summary", "extracted": "Extracted data", "original": "Original file", "warnings": "Please check",
+  "nextSteps": "Next steps", "askDoctor": "Ask your doctor", "meaning": "What it means", "reasons": "Common reasons",
+  "medicines": "Medicines", "labResults": "Lab results", "test": "Test", "value": "Value", "range": "Range", "status": "Status",
+  "High": "High", "Low": "Low", "Critically high": "Critically high", "Critically low": "Critically low",
+  "reports": "Reports", "diagnoses": "Diagnoses", "noItems": "Nothing here yet",
+  "abhaTitle": "ABHA link, import and export", "abhaInput": "ABHA number (XX-XXXX-XXXX-XXXX) or address (name@sbx)",
+  "sendOtp": "Send OTP", "otp": "OTP", "verify": "Verify", "demoOtp": "Demo OTP", "import": "Fetch from linked facilities",
+  "imported": "Imported {{n}} record(s)", "export": "Download FHIR bundle", "mockNote": "Demo only: real ABDM integration needs sandbox registration.",
+  "disclaimer": "This app helps you understand your records. It does not provide diagnosis or treatment. Always consult a qualified doctor.",
+  "language": "Language", "translating": "Translating…", "noSummary": "No summary for this record.", "abdmBadge": "ABDM"
+}

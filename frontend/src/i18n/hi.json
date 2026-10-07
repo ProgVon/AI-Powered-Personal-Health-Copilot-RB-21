@@ -1,0 +1,20 @@
+{
+  "app": "हेल्थ कोपायलट", "login": "लॉग इन", "register": "खाता बनाएं", "logout": "लॉग आउट",
+  "email": "ईमेल", "password": "पासवर्ड", "name": "पूरा नाम", "dob": "जन्म तिथि", "sex": "लिंग",
+  "home": "होम", "upload": "अपलोड", "timeline": "टाइमलाइन", "abha": "आभा",
+  "uploadTitle": "मेडिकल दस्तावेज़ अपलोड करें", "uploadHint": "JPG, PNG या PDF फ़ाइलें डालें (अधिकतम 15 MB), या फ़ोटो लें",
+  "reading": "पढ़ रहे हैं…", "done": "पूरा", "failed": "यह दस्तावेज़ पढ़ा नहीं जा सका — कृपया साफ़ फ़ोटो लें",
+  "openDoc": "खोलें", "tooBig": "फ़ाइल बहुत बड़ी है (अधिकतम 15 MB)", "badType": "केवल JPG, PNG या PDF फ़ाइलें",
+  "conditions": "बीमारियाँ", "allergies": "एलर्जी", "currentMedicines": "वर्तमान दवाइयाँ", "latestAbnormal": "हाल के असामान्य नतीजे",
+  "none": "कुछ दर्ज नहीं", "age": "उम्र", "abhaLinked": "आभा जुड़ा है", "abhaNotLinked": "आभा नहीं जुड़ा",
+  "summary": "सारांश", "extracted": "निकाला गया डेटा", "original": "मूल फ़ाइल", "warnings": "कृपया जाँचें",
+  "nextSteps": "अगले कदम", "askDoctor": "डॉक्टर से पूछें", "meaning": "इसका मतलब", "reasons": "आम कारण",
+  "medicines": "दवाइयाँ", "labResults": "लैब नतीजे", "test": "जाँच", "value": "मान", "range": "सामान्य सीमा", "status": "स्थिति",
+  "High": "ज़्यादा", "Low": "कम", "Critically high": "बहुत ज़्यादा", "Critically low": "बहुत कम",
+  "reports": "रिपोर्ट", "diagnoses": "निदान", "noItems": "अभी कुछ नहीं",
+  "abhaTitle": "आभा लिंक, इम्पोर्ट और एक्सपोर्ट", "abhaInput": "आभा नंबर (XX-XXXX-XXXX-XXXX) या पता (name@sbx)",
+  "sendOtp": "OTP भेजें", "otp": "OTP", "verify": "सत्यापित करें", "demoOtp": "डेमो OTP", "import": "लिंक्ड संस्थानों से लाएं",
+  "imported": "{{n}} रिकॉर्ड आयात हुए", "export": "FHIR बंडल डाउनलोड करें", "mockNote": "केवल डेमो: असली ABDM एकीकरण के लिए सैंडबॉक्स पंजीकरण चाहिए।",
+  "disclaimer": "यह ऐप आपको अपने रिकॉर्ड समझने में मदद करता है। यह निदान या इलाज नहीं देता। हमेशा योग्य डॉक्टर से सलाह लें।",
+  "language": "भाषा", "translating": "अनुवाद हो रहा है…", "noSummary": "इस रिकॉर्ड का सारांश नहीं है।", "abdmBadge": "ABDM"
+}

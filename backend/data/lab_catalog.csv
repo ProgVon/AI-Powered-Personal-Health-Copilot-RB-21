@@ -1,0 +1,34 @@
+loinc,canonical_name,aliases,canonical_unit,unit_factors,ref_low_m,ref_high_m,ref_low_f,ref_high_f,critical_low,critical_high,plausible_min,plausible_max,explainer
+4548-4,HbA1c,Glycated Hb|Glycosylated Haemoglobin|A1C|Hb A1c,%,,4.0,5.6,4.0,5.6,3.0,14.0,3,20,Shows your average blood sugar over the past 2-3 months.
+1558-6,Fasting Glucose,Fasting Blood Sugar|FBS|Fasting Plasma Glucose|Glucose Fasting|Blood Sugar Fasting,mg/dL,mmol/L:18.0,70,99,70,99,40,400,10,1500,Measures the sugar in your blood after not eating overnight.
+2345-7,Random Glucose,Random Blood Sugar|RBS|Glucose Random|Blood Sugar Random,mg/dL,mmol/L:18.0,70,140,70,140,40,500,10,1500,Measures the sugar in your blood at a random time of day.
+718-7,Haemoglobin,Hemoglobin|Hb|Hgb,g/dL,g/L:0.1,13.0,17.0,12.0,15.0,7.0,20.0,2,25,Shows the protein in red blood cells that carries oxygen around your body.
+3016-3,TSH,Thyroid Stimulating Hormone|Thyrotropin,mIU/L,uIU/mL:1.0|mU/L:1.0,0.4,4.0,0.4,4.0,,,0.001,500,Shows how your thyroid gland is working.
+3024-7,Free T4,FT4|Free Thyroxine,ng/dL,pmol/L:0.0777,0.8,1.8,0.8,1.8,,,0.05,10,Measures the active thyroid hormone in your blood.
+2160-0,Creatinine,Serum Creatinine|S. Creatinine,mg/dL,umol/L:0.0113,0.7,1.3,0.6,1.1,,7.0,0.1,30,A waste product that your kidneys filter out. It helps show how well they work.
+3091-6,Urea,Blood Urea|Serum Urea,mg/dL,,15,45,15,45,,,3,400,A waste product of protein breakdown that your kidneys filter out.
+3084-1,Uric Acid,Serum Uric Acid|S. Uric Acid,mg/dL,umol/L:0.0168,3.4,7.0,2.4,6.0,,,0.5,20,A waste product that can build up and form crystals in joints.
+2093-3,Total Cholesterol,Cholesterol|Serum Cholesterol|Cholesterol Total,mg/dL,mmol/L:38.67,0,200,0,200,,,40,800,Measures all the cholesterol (a fatty substance) in your blood.
+13457-7,LDL Cholesterol,LDL|LDL-C|Bad Cholesterol|LDL Cholesterol Calculated,mg/dL,mmol/L:38.67,0,100,0,100,,,10,600,The "bad" cholesterol that can build up in blood vessel walls.
+2085-9,HDL Cholesterol,HDL|HDL-C|Good Cholesterol,mg/dL,mmol/L:38.67,40,,50,,,,5,200,The "good" cholesterol that helps clear other cholesterol from your blood.
+2571-8,Triglycerides,TG|Serum Triglycerides,mg/dL,mmol/L:88.57,0,150,0,150,,,10,3000,A type of fat in your blood that comes from food and is made by your body.
+6690-2,WBC,Total Leucocyte Count|TLC|White Blood Cells|Total WBC Count|Leukocytes,10^3/uL,/cumm:0.001|cells/uL:0.001|/mm3:0.001|10^9/L:1.0,4.0,11.0,4.0,11.0,2.0,30.0,0.1,500,White blood cells fight infection.
+777-3,Platelets,Platelet Count|PLT|Thrombocytes,10^3/uL,/cumm:0.001|lakhs/cumm:100|lakh/cumm:100|10^9/L:1.0,150,450,150,450,20,1000,5,2000,Small cells that help your blood clot.
+789-8,RBC,Red Blood Cell Count|RBC Count|Erythrocytes,10^6/uL,millions/cumm:1.0|10^12/L:1.0,4.5,5.9,4.1,5.1,,,1,10,Red blood cells carry oxygen around your body.
+4544-3,Haematocrit,Hematocrit|HCT|PCV|Packed Cell Volume,%,,41,53,36,46,,,10,75,The share of your blood made up of red blood cells.
+787-2,MCV,Mean Corpuscular Volume,fL,,80,100,80,100,,,40,150,The average size of your red blood cells.
+1742-6,ALT,SGPT|Alanine Aminotransferase|ALT (SGPT),U/L,,7,55,7,55,,,1,5000,A liver enzyme. Higher levels can mean the liver is irritated.
+1920-8,AST,SGOT|Aspartate Aminotransferase|AST (SGOT),U/L,,8,48,8,48,,,1,5000,An enzyme found in the liver and muscles.
+6768-6,Alkaline Phosphatase,ALP|Alk Phos|Alkaline Phosphatase (ALP),U/L,,44,147,44,147,,,5,3000,An enzyme found in the liver and bones.
+1975-2,Total Bilirubin,Bilirubin Total|S. Bilirubin|Serum Bilirubin,mg/dL,umol/L:0.0585,0.1,1.2,0.1,1.2,,15.0,0.01,40,A yellow substance made when red blood cells break down. The liver clears it.
+1751-7,Albumin,Serum Albumin|S. Albumin,g/dL,g/L:0.1,3.5,5.0,3.5,5.0,,,1,8,A protein made by the liver that keeps fluid in your blood vessels.
+2885-2,Total Protein,Serum Protein|Protein Total,g/dL,g/L:0.1,6.0,8.3,6.0,8.3,,,2,12,Measures all the proteins in your blood.
+2951-2,Sodium,Serum Sodium|Na,mmol/L,mEq/L:1.0,135,145,135,145,120,160,90,190,A salt in your blood that helps balance fluids and nerve function.
+2823-3,Potassium,Serum Potassium|K,mmol/L,mEq/L:1.0,3.5,5.1,3.5,5.1,2.5,6.5,1.5,9,A mineral that helps your heart and muscles work properly.
+17861-6,Calcium,Serum Calcium|S. Calcium,mg/dL,mmol/L:4.008,8.6,10.2,8.6,10.2,6.0,13.0,3,20,A mineral important for bones and muscles.
+1989-3,Vitamin D,25-OH Vitamin D|Vitamin D 25 Hydroxy|25 Hydroxy Vitamin D|Vit D,ng/mL,nmol/L:0.4,30,100,30,100,,,1,300,Shows whether you have enough vitamin D for healthy bones.
+2132-9,Vitamin B12,Vit B12|Cyanocobalamin|B12,pg/mL,pmol/L:1.355,200,900,200,900,,,20,5000,Needed for healthy nerves and red blood cells.
+2276-4,Ferritin,Serum Ferritin,ng/mL,ug/L:1.0,24,336,11,307,,,1,5000,Shows how much iron your body has stored.
+2498-4,Iron,Serum Iron|S. Iron,ug/dL,umol/L:5.585,60,170,60,170,,,5,1000,Measures the iron circulating in your blood.
+1988-5,CRP,C-Reactive Protein|C Reactive Protein,mg/L,mg/dL:10.0,0,5,0,5,,,0,500,A marker that rises when there is inflammation in the body.
+4537-7,ESR,Erythrocyte Sedimentation Rate|ESR (Wintrobe)|Sed Rate,mm/hr,mm/h:1.0,0,15,0,20,,,0,150,A general marker that can rise when there is inflammation.

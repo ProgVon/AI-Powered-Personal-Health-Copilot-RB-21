@@ -1,0 +1,151 @@
+{
+ "resourceType": "Bundle",
+ "type": "collection",
+ "timestamp": "2026-10-01T10:00:00+00:00",
+ "entry": [
+  {
+   "fullUrl": "Patient/abdm-pat-1",
+   "resource": {
+    "resourceType": "Patient",
+    "id": "abdm-pat-1",
+    "name": [
+     {
+      "text": "Demo Patient"
+     }
+    ],
+    "gender": "female",
+    "birthDate": "1990-05-12"
+   }
+  },
+  {
+   "fullUrl": "Composition/c1",
+   "resource": {
+    "resourceType": "Composition",
+    "id": "c1",
+    "status": "final",
+    "title": "PrescriptionRecord",
+    "date": "2026-09-20",
+    "type": {
+     "coding": [
+      {
+       "system": "http://snomed.info/sct",
+       "code": "440545006",
+       "display": "PrescriptionRecord"
+      }
+     ],
+     "text": "PrescriptionRecord"
+    },
+    "subject": {
+     "reference": "Patient/abdm-pat-1"
+    },
+    "author": [
+     {
+      "display": "Dr. A. Sharma"
+     }
+    ],
+    "custodian": {
+     "display": "City Care Hospital (mock HIP)"
+    },
+    "section": [
+     {
+      "title": "Medications",
+      "entry": [
+       {
+        "reference": "MedicationRequest/m1"
+       },
+       {
+        "reference": "MedicationRequest/m2"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "fullUrl": "MedicationRequest/m1",
+   "resource": {
+    "resourceType": "MedicationRequest",
+    "id": "m1",
+    "status": "active",
+    "intent": "order",
+    "subject": {
+     "reference": "Patient/abdm-pat-1"
+    },
+    "authoredOn": "2026-09-20",
+    "medicationCodeableConcept": {
+     "text": "Ferrous Ascorbate 100 mg"
+    },
+    "dosageInstruction": [
+     {
+      "text": "1-0-0 after food"
+     }
+    ],
+    "requester": {
+     "display": "Dr. A. Sharma"
+    },
+    "dispenseRequest": {
+     "expectedSupplyDuration": {
+      "value": 60,
+      "unit": "days",
+      "system": "http://unitsofmeasure.org",
+      "code": "d"
+     }
+    }
+   }
+  },
+  {
+   "fullUrl": "MedicationRequest/m2",
+   "resource": {
+    "resourceType": "MedicationRequest",
+    "id": "m2",
+    "status": "active",
+    "intent": "order",
+    "subject": {
+     "reference": "Patient/abdm-pat-1"
+    },
+    "authoredOn": "2026-09-20",
+    "medicationCodeableConcept": {
+     "text": "Folic Acid 5 mg"
+    },
+    "dosageInstruction": [
+     {
+      "text": "1-0-0"
+     }
+    ],
+    "requester": {
+     "display": "Dr. A. Sharma"
+    },
+    "dispenseRequest": {
+     "expectedSupplyDuration": {
+      "value": 60,
+      "unit": "days",
+      "system": "http://unitsofmeasure.org",
+      "code": "d"
+     }
+    }
+   }
+  },
+  {
+   "fullUrl": "Condition/cd1",
+   "resource": {
+    "resourceType": "Condition",
+    "id": "cd1",
+    "subject": {
+     "reference": "Patient/abdm-pat-1"
+    },
+    "clinicalStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+       "code": "active"
+      }
+     ]
+    },
+    "code": {
+     "text": "Iron deficiency anaemia"
+    },
+    "recordedDate": "2026-09-20"
+   }
+  }
+ ]
+}
