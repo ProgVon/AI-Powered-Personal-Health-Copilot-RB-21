@@ -45,11 +45,7 @@ def test_full_flow(monkeypatch):
     monkeypatch.setattr(graph, "init_chat_model", lambda *a, **k: FakeLLM(EXTRACTION))
     monkeypatch.setattr(summarize, "init_chat_model", lambda *a, **k: FakeLLM(SUMMARY))
     with TestClient(app) as c:
-        tok = c.post("/auth/register", json={"email": "S@x.com", "password": "pw", "name": "Sunita Devi",
-                                            "dob": "1990-01-01", "sex": "female"}).json()["token"]
-        h = {"Authorization": f"Bearer {tok}"}
-        assert c.post("/auth/login", json={"email": "s@x.com", "password": "bad"}).status_code == 401
-        assert c.get("/profile").status_code in (401, 403)
+        h = {}
         assert c.post("/documents", headers=h, files={"file": ("a.txt", b"x", "text/plain")}).status_code == 415
 
         r = c.post("/documents", headers=h, files={"file": ("a.png", _png(), "image/png")})
@@ -66,7 +62,7 @@ def test_full_flow(monkeypatch):
 
         assert c.get(f"/documents/{d['id']}/file", headers=h).status_code == 200
         prof = c.get("/profile", headers=h).json()
-        assert prof["conditions"] == ["Anaemia"] and prof["age"] is not None
+        assert prof["conditions"] == ["Anaemia"]
         kinds = {i["type"] for i in c.get("/profile/timeline", headers=h).json()}
         assert {"document", "abnormal_result", "diagnosis", "medicine_started"} <= kinds
         only = c.get("/profile/timeline?types=diagnoses", headers=h).json()
@@ -83,7 +79,7 @@ def test_full_flow(monkeypatch):
 
         Bundle.model_validate(c.get("/profile/fhir", headers=h).json())
         assert c.delete("/profile", headers=h).status_code == 204
-        assert c.post("/auth/login", json={"email": "s@x.com", "password": "pw"}).status_code == 401
+        assert c.get("/documents", headers=h).json() == []  # data gone; a fresh demo profile is recreated
 
 
 def test_extraction_failure_marks_failed(monkeypatch):
@@ -92,8 +88,7 @@ def test_extraction_failure_marks_failed(monkeypatch):
             raise RuntimeError("api down")
     monkeypatch.setattr(graph, "init_chat_model", lambda *a, **k: Boom(None))
     with TestClient(app) as c:
-        tok = c.post("/auth/register", json={"email": "f@x.com", "password": "pw", "name": "F"}).json()["token"]
-        h = {"Authorization": f"Bearer {tok}"}
+        h = {}
         r = c.post("/documents", headers=h, files={"file": ("a.png", _png(), "image/png")})
         d = c.get(f"/documents/{r.json()['id']}", headers=h).json()
         assert d["status"] == "failed" and "api down" in d["extraction"]["_error"]

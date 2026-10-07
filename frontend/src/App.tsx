@@ -1,18 +1,15 @@
-import { NavLink, Navigate, Outlet, Route, Routes, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, Route, Routes } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { api, token } from "./api";
+import { api } from "./api";
 import { LANGS, Lang } from "./i18n";
 import Abha from "./pages/Abha";
 import DocumentDetail from "./pages/DocumentDetail";
 import Home from "./pages/Home";
-import Login from "./pages/Login";
 import TimelinePage from "./pages/TimelinePage";
 import Upload from "./pages/Upload";
 
 function Layout() {
   const { t, i18n } = useTranslation();
-  const nav = useNavigate();
-  if (!token.get()) return <Navigate to="/login" />;
   const link = ({ isActive }: { isActive: boolean }) => `rounded px-3 py-1 ${isActive ? "bg-teal-700 text-white" : "hover:bg-teal-100"}`;
   return (
     <div className="mx-auto max-w-4xl p-4">
@@ -28,7 +25,6 @@ function Layout() {
           onChange={(e) => { const l = e.target.value as Lang; i18n.changeLanguage(l); try { localStorage.setItem("lang", l); } catch { /* private mode */ } api.setLanguage(l); }}>
           {Object.entries(LANGS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <button className="text-sm underline" onClick={() => { token.clear(); nav("/login"); }}>{t("logout")}</button>
       </header>
       <main><Outlet /></main>
     </div>
@@ -38,7 +34,6 @@ function Layout() {
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
       <Route element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="upload" element={<Upload />} />

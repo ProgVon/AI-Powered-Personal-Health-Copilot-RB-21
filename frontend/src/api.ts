@@ -1,18 +1,9 @@
 const BASE = import.meta.env.VITE_API ?? "http://localhost:8000";
 
-export const token = {
-  get: () => localStorage.getItem("token"),
-  set: (t: string) => localStorage.setItem("token", t),
-  clear: () => localStorage.removeItem("token"),
-};
-
 async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  const t = token.get();
-  if (t) headers.set("Authorization", `Bearer ${t}`);
   if (init.body && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
   const r = await fetch(BASE + path, { ...init, headers });
-  if (r.status === 401 && t) { token.clear(); location.href = "/login"; }
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? r.statusText);
   return r.status === 204 ? (undefined as T) : r.json();
 }
@@ -38,15 +29,13 @@ export type Profile = {
 };
 
 export const api = {
-  login: (email: string, password: string) => post<{ token: string }>("/auth/login", { email, password }),
-  register: (b: Record<string, string>) => post<{ token: string }>("/auth/register", b),
   profile: () => req<Profile>("/profile"),
   setLanguage: (preferred_language: string) => req("/profile", { method: "PUT", body: JSON.stringify({ preferred_language }) }),
   upload: (f: File) => { const fd = new FormData(); fd.append("file", f); return req<Doc>("/documents", { method: "POST", body: fd }); },
   docs: () => req<Doc[]>("/documents"),
   doc: (id: number) => req<Doc>(`/documents/${id}`),
   summary: (id: number, lang: string) => req<Summary>(`/documents/${id}/summary?lang=${lang}`),
-  file: async (id: number) => URL.createObjectURL(await (await fetch(`${BASE}/documents/${id}/file`, { headers: { Authorization: `Bearer ${token.get()}` } })).blob()),
+  file: async (id: number) => URL.createObjectURL(await (await fetch(`${BASE}/documents/${id}/file`)).blob()),
   timeline: (types: string[]) => req<TimelineItem[]>(`/profile/timeline?types=${types.join(",")}`),
   abhaLink: (abha: string) => post<{ demo_otp: string }>("/abha/link", { abha }),
   abhaVerify: (otp: string) => post("/abha/verify", { otp }),

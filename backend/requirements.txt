@@ -11,8 +11,6 @@ langchain-anthropic
 pymupdf
 pillow
 rapidfuzz
-pyjwt
-bcrypt
 fhir.resources
 pytest
 httpx
