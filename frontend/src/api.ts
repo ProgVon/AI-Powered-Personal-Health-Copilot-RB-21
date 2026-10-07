@@ -16,6 +16,7 @@ export type Summary = {
 };
 export type Doc = {
   id: number; doc_type: string | null; doc_date: string | null; facility: string | null; status: string; source: string;
+  created_at?: string; practitioner?: string | null;
   summary?: Summary | null; extraction?: { _warnings?: string[]; _error?: string } | null;
   observations?: Obs[]; medications?: Med[]; conditions?: { name: string }[]; allergies?: { substance: string }[];
 };
@@ -25,7 +26,8 @@ export type TimelineItem = { type: string; date: string; document_id: number; ti
 export type Profile = {
   name: string; age: number | null; abha: { number: string | null; address: string | null; linked: boolean };
   conditions: string[]; allergies: string[]; current_medicines: { name: string; salt: string | null; dose_pattern: string | null; document_id: number }[];
-  latest_abnormal: { test: string; value: string | number; unit: string | null; interpretation: string; document_id: number }[];
+  latest_abnormal: { test: string; value: string | number; unit: string | null; interpretation: string; document_id: number; ref_low: number | null; ref_high: number | null }[];
+  dob: string | null; sex: string | null;
 };
 
 export const api = {
@@ -35,7 +37,7 @@ export const api = {
   docs: () => req<Doc[]>("/documents"),
   doc: (id: number) => req<Doc>(`/documents/${id}`),
   summary: (id: number, lang: string) => req<Summary>(`/documents/${id}/summary?lang=${lang}`),
-  file: async (id: number) => URL.createObjectURL(await (await fetch(`${BASE}/documents/${id}/file`)).blob()),
+  file: async (id: number) => { const b = await (await fetch(`${BASE}/documents/${id}/file`)).blob(); return { url: URL.createObjectURL(b), type: b.type }; },
   timeline: (types: string[]) => req<TimelineItem[]>(`/profile/timeline?types=${types.join(",")}`),
   abhaLink: (abha: string) => post<{ demo_otp: string }>("/abha/link", { abha }),
   abhaVerify: (otp: string) => post("/abha/verify", { otp }),

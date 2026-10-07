@@ -1,1 +1,77 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #f6fbf7; --surface: #ffffff; --surface-2: #edf8f0; --ink: #0f2a1a; --muted: #4d6b58; --line: #d5eadb;
+  --brand: #15803d; --brand-strong: #166534; --brand-soft: #d9f2e1; --on-brand: #ffffff;
+  --ok: #15803d; --ok-soft: #dcf5e4; --low: #0369a1; --low-soft: #dff1fc; --high: #b45309; --high-soft: #fdf0cf;
+  --crit: #b91c1c; --crit-soft: #fde3e3; --med: #4f46e5; --med-soft: #e4e6fd; --dx: #be185d; --dx-soft: #fce4f0;
+  --shadow: 0 1px 2px rgb(22 101 52 / .05), 0 10px 28px -14px rgb(22 101 52 / .16);
+  color-scheme: light;
+}
+.dark {
+  --bg: #06150d; --surface: #0d2217; --surface-2: #11301f; --ink: #f2faf5; --muted: #9bb5a5; --line: #1d4130;
+  --brand: #6ee7a0; --brand-strong: #a7f3c4; --brand-soft: #114027; --on-brand: #052e16;
+  --ok: #4ade80; --ok-soft: #0f2e1b; --low: #38bdf8; --low-soft: #0a2a3d; --high: #fbbf24; --high-soft: #3a2a07;
+  --crit: #f87171; --crit-soft: #3d1414; --med: #a5b4fc; --med-soft: #25285a; --dx: #f9a8d4; --dx-soft: #4a1730;
+  --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 10px 28px -14px rgb(0 0 0 / .6);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg); --color-surface: var(--surface); --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink); --color-muted: var(--muted); --color-line: var(--line);
+  --color-brand: var(--brand); --color-brand-strong: var(--brand-strong); --color-brand-soft: var(--brand-soft);
+  --color-on-brand: var(--on-brand);
+  --color-ok: var(--ok); --color-ok-soft: var(--ok-soft); --color-low: var(--low); --color-low-soft: var(--low-soft);
+  --color-high: var(--high); --color-high-soft: var(--high-soft); --color-crit: var(--crit); --color-crit-soft: var(--crit-soft);
+  --color-med: var(--med); --color-med-soft: var(--med-soft); --color-dx: var(--dx); --color-dx-soft: var(--dx-soft);
+  --font-sans: "Inter", "Noto Sans Devanagari", "Noto Sans Telugu", system-ui, sans-serif;
+  --font-display: "Fraunces", "Noto Sans Devanagari", "Noto Sans Telugu", Georgia, serif;
+  --shadow-card: var(--shadow);
+}
+
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+
+@layer components {
+  .card { @apply rounded-2xl border border-line bg-surface shadow-card; }
+  .btn { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition
+    active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply bg-brand text-on-brand hover:bg-brand-strong hover:text-on-brand; }
+  .btn-soft { @apply bg-brand-soft text-brand-strong hover:brightness-95; }
+  .btn-ghost { @apply border border-line bg-surface text-ink hover:bg-surface-2; }
+  .input { @apply min-h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-sm text-ink
+    placeholder:text-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30; }
+  .eyebrow { @apply text-xs font-semibold uppercase tracking-[.14em] text-muted; }
+  .h-display { font-family: var(--font-display); font-optical-sizing: auto; letter-spacing: -.01em; }
+}
+
+.font-arial, .font-arial .h-display { font-family: Arial, Helvetica, "Noto Sans Devanagari", "Noto Sans Telugu", sans-serif; }
+
+@keyframes fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes shimmer { to { background-position: -200% 0; } }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes slide-in { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+@keyframes pop { 0% { transform: scale(.4); opacity: 0; } 70% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
+
+.reveal { animation: fade-up .5s cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(var(--d, 0) * 70ms); }
+.skeleton { background: linear-gradient(90deg, var(--line) 25%, var(--surface-2) 50%, var(--line) 75%); background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite; border-radius: .75rem; }
+.ecg { stroke-dasharray: 700; stroke-dashoffset: 700; animation: draw 4.5s linear infinite; }
+.indeterminate::after { content: ""; position: absolute; inset: 0; width: 40%; border-radius: inherit;
+  background: var(--brand); animation: indeterminate 1.3s ease-in-out infinite; }
+.pop { animation: pop .45s cubic-bezier(.2,.9,.3,1.3) both; }
+.toast { animation: slide-in .3s ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+  .ecg { stroke-dashoffset: 0; }
+}
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; color: #000; }
+  .card { box-shadow: none; break-inside: avoid; }
+}

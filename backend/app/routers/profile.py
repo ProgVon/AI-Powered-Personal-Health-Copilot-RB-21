@@ -46,6 +46,7 @@ def _profile_json(p: Profile, db: Session) -> dict:
                                "document_id": m.document_id} for m in meds],
         "latest_abnormal": [{"test": o.display_name, "value": o.value_num if o.value_num is not None else o.value_text,
                              "unit": o.unit, "interpretation": o.interpretation, "date": o.effective_at,
+                             "ref_low": o.ref_low, "ref_high": o.ref_high,
                              "document_id": o.document_id} for o in latest.values()],
     }
 
