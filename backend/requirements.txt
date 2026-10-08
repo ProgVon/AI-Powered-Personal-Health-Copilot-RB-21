@@ -8,6 +8,8 @@ pydantic-settings
 langchain
 langgraph
 langchain-anthropic
+langchain-google-genai
+langchain-openai
 pymupdf
 pillow
 rapidfuzz

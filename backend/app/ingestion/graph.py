@@ -1,5 +1,6 @@
 import base64
 import logging
+import time
 from typing import TypedDict
 
 from langchain.chat_models import init_chat_model
@@ -36,12 +37,14 @@ def _image_block(path: str) -> dict:
 
 
 def extract(state):
-    extractor = init_chat_model(settings.VISION_MODEL, temperature=0).with_structured_output(DocumentExtraction)
+    extractor = init_chat_model(settings.VISION_MODEL, temperature=0, api_key=settings.LLM_API_KEY or None, timeout=60, max_retries=1).with_structured_output(DocumentExtraction)
     content = [{"type": "text", "text": EXTRACT_PROMPT.format(text_layer=state["text_layer"] or "none")}]
     content += [_image_block(p) for p in state["page_paths"]]
     attempts = state["attempts"] + 1
+    t0 = time.time()
     try:
         result = extractor.invoke([HumanMessage(content=content)])
+        log.info("extract took %.1fs", time.time() - t0)
         if result is None:
             raise ValueError("model returned no structured output")
         return {"extraction": result.model_dump(), "attempts": attempts}

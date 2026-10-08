@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 
 from langchain.chat_models import init_chat_model
 
@@ -62,9 +63,11 @@ def build_summary(record: dict) -> dict:
     prompt = SUMMARY_PROMPT.format(record=json.dumps(llm_in, default=str, ensure_ascii=False))
     summary = None
     try:
-        llm = init_chat_model(settings.TEXT_MODEL, temperature=0).with_structured_output(Summary)
+        llm = init_chat_model(settings.TEXT_MODEL, temperature=0, api_key=settings.LLM_API_KEY or None, timeout=60, max_retries=1).with_structured_output(Summary)
         for attempt in range(2):  # regenerate once on a banned phrase
+            t0 = time.time()
             out = llm.invoke(prompt).model_dump()
+            log.info("summary call %s took %.1fs", attempt + 1, time.time() - t0)
             hits = safety_text.check(out)
             if not hits:
                 summary = out
@@ -84,7 +87,7 @@ def build_summary(record: dict) -> dict:
 
 
 def translate_summary(summary: dict, lang: str) -> dict:
-    llm = init_chat_model(settings.TEXT_MODEL, temperature=0).with_structured_output(Summary)
+    llm = init_chat_model(settings.TEXT_MODEL, temperature=0, api_key=settings.LLM_API_KEY or None, timeout=60, max_retries=1).with_structured_output(Summary)
     out = llm.invoke(TRANSLATE_PROMPT.format(language=LANGS[lang], summary=json.dumps(summary, ensure_ascii=False)))
     return out.model_dump()
 
