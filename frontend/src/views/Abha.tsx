@@ -1,8 +1,9 @@
+"use client";
 import { useState } from "react";
-import { useOutletContext } from "react-router-dom";
+
 import { useTranslation } from "react-i18next";
 import { api } from "../api";
-import type { Ctx } from "../App";
+import { useProfile } from "@/Shell";
 import Icon, { IconName } from "../components/Icon";
 import { useToast } from "../components/Toast";
 import { Badge, Spinner } from "../components/ui";
@@ -12,7 +13,7 @@ const STEPS = ["link", "verify", "sync"] as const;
 export default function Abha() {
   const { t } = useTranslation();
   const toast = useToast();
-  const { profile, reload } = useOutletContext<Ctx>();
+  const { profile, reload } = useProfile();
   const [abha, setAbha] = useState("");
   const [otp, setOtp] = useState("");
   const [demo, setDemo] = useState("");
@@ -55,7 +56,7 @@ export default function Abha() {
         <p className="mt-1 max-w-xl text-muted">{t("abhaSub")}</p>
       </header>
 
-      <div className="font-arial reveal relative overflow-hidden rounded-3xl border border-line p-6 text-ink shadow-card md:p-8"
+      <div className="reveal relative overflow-hidden rounded-3xl border border-line p-6 text-ink shadow-card md:p-8"
         style={{ background: "linear-gradient(135deg, var(--brand-soft) 0%, var(--surface-2) 60%, var(--surface) 100%)" }}>
         <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-brand/10 blur-2xl" aria-hidden />
         <div className="relative flex items-start justify-between">

@@ -2,12 +2,11 @@ import json
 import logging
 import time
 
-from langchain.chat_models import init_chat_model
-
 from ..config import settings
 from ..db import SessionLocal
-from ..models import Document
+from ..models import Document, Profile
 from ..rules import safety_text
+from .llm import structured
 from .prompts import SUMMARY_PROMPT, SUMMARY_RETRY, TRANSLATE_PROMPT
 from .schemas import Summary
 
@@ -63,7 +62,7 @@ def build_summary(record: dict) -> dict:
     prompt = SUMMARY_PROMPT.format(record=json.dumps(llm_in, default=str, ensure_ascii=False))
     summary = None
     try:
-        llm = init_chat_model(settings.TEXT_MODEL, temperature=0, api_key=settings.LLM_API_KEY or None, timeout=60, max_retries=1).with_structured_output(Summary)
+        llm = structured(settings.TEXT_MODEL, Summary)
         for attempt in range(2):  # regenerate once on a banned phrase
             t0 = time.time()
             out = llm.invoke(prompt).model_dump()
@@ -87,15 +86,22 @@ def build_summary(record: dict) -> dict:
 
 
 def translate_summary(summary: dict, lang: str) -> dict:
-    llm = init_chat_model(settings.TEXT_MODEL, temperature=0, api_key=settings.LLM_API_KEY or None, timeout=60, max_retries=1).with_structured_output(Summary)
-    out = llm.invoke(TRANSLATE_PROMPT.format(language=LANGS[lang], summary=json.dumps(summary, ensure_ascii=False)))
+    out = structured(settings.TEXT_MODEL, Summary).invoke(TRANSLATE_PROMPT.format(language=LANGS[lang], summary=json.dumps(summary, ensure_ascii=False)))
     return out.model_dump()
 
 
 def summarize(state):
+    summary = build_summary(state["record"])  # model calls happen outside any DB session, so SQLite isn't locked
+    with SessionLocal() as db:
+        lang = db.get(Profile, state["profile_id"]).user.preferred_language
+    i18n = None
+    if lang in LANGS:  # translate now so the reader's language is ready when they open it
+        try:
+            i18n = {lang: translate_summary(summary, lang)}
+        except Exception:
+            log.exception("pre-translation failed; it will run on demand")
     with SessionLocal() as db:
         doc = db.get(Document, state["document_id"])
-        doc.summary = build_summary(state["record"])
-        doc.status = "done"
+        doc.summary, doc.summary_i18n, doc.status = summary, i18n, "done"
         db.commit()
     return {}

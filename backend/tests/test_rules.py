@@ -116,3 +116,9 @@ def test_safety_catches(bad):
 def test_safety_passes_and_nested():
     assert safety_text.check({"a": ["Your HbA1c is higher than the usual range."]}) == []
     assert safety_text.check({"a": [{"b": "you have diabetes"}]})
+
+
+def test_same_person_tolerates_titles_order_and_spelling():
+    from app.ingestion.normalize import same_person
+    assert same_person("Smt. Devi Sunita", "Sunita Devi") and same_person("Sunitha Devi", "Sunita Devi")
+    assert same_person("Sunita", "Sunita Devi") and not same_person("Mr. Ramesh Kumar", "Sunita Devi")

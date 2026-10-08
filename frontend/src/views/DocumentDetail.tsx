@@ -1,5 +1,7 @@
+"use client";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { api, Doc, Summary } from "../api";
 import AbnormalCard from "../components/AbnormalCard";
@@ -30,7 +32,7 @@ function Processing() {
 }
 
 export default function DocumentDetail() {
-  const id = Number(useParams().id);
+  const id = Number(useParams<{ id: string }>().id);
   const { t, i18n } = useTranslation();
   const [doc, setDoc] = useState<Doc | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -38,13 +40,13 @@ export default function DocumentDetail() {
   const [file, setFile] = useState<{ url: string; type: string } | null>(null);
   const [tab, setTab] = useState<Tab>("summary");
 
-  useEffect(() => {  // poll while processing
+  useEffect(() => {  // poll until the summary lands; extracted data shows as soon as status is "summarizing"
     let timer: number;
-    const load = () => api.doc(id).then((d) => { setDoc(d); if (d.status === "processing") timer = window.setTimeout(load, 2000); });
+    const load = () => api.doc(id).then((d) => { setDoc(d); if (d.status === "processing" || d.status === "summarizing") timer = window.setTimeout(load, 1000); });
     load();
     return () => clearTimeout(timer);
   }, [id]);
-  useEffect(() => { if (doc?.source === "upload" && doc.status === "done") api.file(id).then(setFile).catch(() => {}); }, [id, doc?.source, doc?.status]);
+  useEffect(() => { if (doc?.source === "upload" && doc.status !== "processing") api.file(id).then(setFile).catch(() => {}); }, [id, doc?.source, doc?.status === "processing"]);
   useEffect(() => {  // summary follows the UI language; translations are cached server-side
     if (doc?.status !== "done" || !doc.summary) return;
     setBusy(true);
@@ -54,7 +56,7 @@ export default function DocumentDetail() {
   if (!doc) return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-64" /></div>;
   if (doc.status === "processing") return <Processing />;
   if (doc.status === "failed")
-    return <EmptyState icon="alert" title={t("failedTitle")} sub={t("failedSub")}><Link to="/upload" className="btn btn-primary mt-2"><Icon name="upload" className="h-4 w-4" />{t("tryAgain")}</Link></EmptyState>;
+    return <EmptyState icon="alert" title={t("failedTitle")} sub={t("failedSub")}><Link href="/upload" className="btn btn-primary mt-2"><Icon name="upload" className="h-4 w-4" />{t("tryAgain")}</Link></EmptyState>;
 
   const kind = doc.doc_type ?? "other";
   const warnings = doc.extraction?._warnings ?? [];
@@ -94,7 +96,9 @@ export default function DocumentDetail() {
 
       {tab === "summary" && (summary
         ? <SummaryCard s={summary} observations={obs} />
-        : <EmptyState icon="file" title={t("noSummary")} />)}
+        : doc.status === "summarizing"
+          ? <div className="card flex items-center gap-3 p-6 text-muted"><Spinner />{t("processing.s3")}</div>
+          : <EmptyState icon="file" title={t("noSummary")} />)}
 
       {tab === "data" && (
         <div className="space-y-8">

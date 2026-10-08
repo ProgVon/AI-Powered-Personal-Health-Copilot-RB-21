@@ -1,8 +1,9 @@
+"use client";
 import { ReactNode, useEffect, useState } from "react";
-import { Link, useOutletContext } from "react-router-dom";
+import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { api, Doc } from "../api";
-import type { Ctx } from "../App";
+import { useProfile } from "@/Shell";
 import Icon, { IconName } from "../components/Icon";
 import RangeGauge from "../components/RangeGauge";
 import { Badge, DOC_ICON, EmptyState, FLAG, fmtDate, SectionTitle, Skeleton, Spinner } from "../components/ui";
@@ -24,7 +25,7 @@ const Block = ({ title, children, d }: { title: string; children: ReactNode; d: 
 
 export default function Home() {
   const { t, i18n } = useTranslation();
-  const { profile: p } = useOutletContext<Ctx>();
+  const { profile: p } = useProfile();
   const [docs, setDocs] = useState<Doc[] | null>(null);
   useEffect(() => { api.docs().then(setDocs).catch(() => setDocs([])); }, []);
 
@@ -36,7 +37,7 @@ export default function Home() {
 
   return (
     <div className="space-y-8">
-      <section className="font-arial reveal relative overflow-hidden rounded-3xl border border-line p-6 text-ink shadow-card md:p-9"
+      <section className="reveal relative overflow-hidden rounded-3xl border border-line p-6 text-ink shadow-card md:p-9"
         style={{ background: "linear-gradient(135deg, var(--brand-soft) 0%, var(--surface-2) 60%, var(--surface) 100%)" }}>
         <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-brand/10 blur-3xl" aria-hidden />
         <svg viewBox="0 0 400 80" preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 bottom-0 h-24 w-full text-brand opacity-30" aria-hidden>
@@ -57,15 +58,15 @@ export default function Home() {
             </div>
           </div>
           <div className="flex gap-3">
-            <Link to="/upload" className="btn btn-primary shadow-lg"><Icon name="plus" className="h-4 w-4" strokeWidth={2.4} />{t("nav.upload")}</Link>
-            <Link to="/timeline" className="btn btn-ghost">{t("nav.timeline")}</Link>
+            <Link href="/upload" className="btn btn-primary shadow-lg"><Icon name="plus" className="h-4 w-4" strokeWidth={2.4} />{t("nav.upload")}</Link>
+            <Link href="/timeline" className="btn btn-ghost">{t("nav.timeline")}</Link>
           </div>
         </div>
         <p className="relative mt-5 max-w-md text-sm text-muted">{t("heroSub")}</p>
       </section>
 
       {first && <EmptyState icon="upload" title={t("firstRunTitle")} sub={t("firstRunSub")}>
-        <Link to="/upload" className="btn btn-primary mt-2"><Icon name="upload" className="h-4 w-4" />{t("nav.upload")}</Link></EmptyState>}
+        <Link href="/upload" className="btn btn-primary mt-2"><Icon name="upload" className="h-4 w-4" />{t("nav.upload")}</Link></EmptyState>}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat d={1} icon="file" tone="brand" value={docs?.length ?? 0} label={t("stat.docs")} />
@@ -86,7 +87,7 @@ export default function Home() {
             {p.latest_abnormal.map((a, i) => {
               const f = FLAG[a.interpretation];
               return (
-                <Link key={i} to={`/documents/${a.document_id}`} className="card reveal group block p-4 transition hover:-translate-y-0.5 hover:border-brand/40" style={{ ["--d" as string]: i }}>
+                <Link key={i} href={`/documents/${a.document_id}`} className="card reveal group block p-4 transition hover:-translate-y-0.5 hover:border-brand/40" style={{ ["--d" as string]: i }}>
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="font-semibold">{a.test}</h3>
                     {f && <Badge tone={f.tone} icon={f.icon}>{t(f.label)}</Badge>}
@@ -103,7 +104,7 @@ export default function Home() {
           {p.current_medicines.length ? (
             <ul className="space-y-2.5">
               {p.current_medicines.map((m, i) => (
-                <li key={i}><Link to={`/documents/${m.document_id}`} className="flex items-center gap-3 rounded-xl p-1.5 transition hover:bg-surface-2">
+                <li key={i}><Link href={`/documents/${m.document_id}`} className="flex items-center gap-3 rounded-xl p-1.5 transition hover:bg-surface-2">
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-med-soft text-med"><Icon name="pill" className="h-4 w-4" /></span>
                   <span className="min-w-0"><span className="block truncate font-medium">{m.name}</span>
                     <span className="block truncate text-xs text-muted">{[m.salt, m.dose_pattern].filter(Boolean).join(" · ")}</span></span>
@@ -118,10 +119,10 @@ export default function Home() {
 
       {docs && docs.length > 0 && (
         <section>
-          <SectionTitle action={<Link to="/timeline" className="text-sm font-semibold text-brand hover:underline">{t("viewAll")}</Link>}>{t("recentDocs")}</SectionTitle>
+          <SectionTitle action={<Link href="/timeline" className="text-sm font-semibold text-brand hover:underline">{t("viewAll")}</Link>}>{t("recentDocs")}</SectionTitle>
           <ul className="card divide-y divide-line overflow-hidden">
             {docs.slice(0, 5).map((d) => (
-              <li key={d.id}><Link to={`/documents/${d.id}`} className="flex items-center gap-4 p-4 transition hover:bg-surface-2">
+              <li key={d.id}><Link href={`/documents/${d.id}`} className="flex items-center gap-4 p-4 transition hover:bg-surface-2">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand"><Icon name={DOC_ICON[d.doc_type ?? "other"] ?? "file"} /></span>
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium">{d.doc_type ? t(`docType.${d.doc_type}`) : t("docType.other")}</span>

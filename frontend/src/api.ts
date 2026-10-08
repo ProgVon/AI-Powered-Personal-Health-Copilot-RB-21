@@ -1,10 +1,13 @@
-const BASE = import.meta.env.VITE_API ?? "http://localhost:8000";
+const BASE = "/api";  // proxied to the backend by next.config.ts
 
 async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
   const r = await fetch(BASE + path, { ...init, headers });
-  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? r.statusText);
+  if (!r.ok) {
+    const detail = (await r.json().catch(() => ({}))).detail;  // 422s carry a list of field errors
+    throw new Error((Array.isArray(detail) ? detail[0]?.msg : detail) ?? r.statusText);
+  }
   return r.status === 204 ? (undefined as T) : r.json();
 }
 const post = <T,>(p: string, body?: unknown) => req<T>(p, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });

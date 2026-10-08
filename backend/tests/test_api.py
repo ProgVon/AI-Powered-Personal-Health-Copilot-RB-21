@@ -28,9 +28,6 @@ class FakeLLM:
     def __init__(self, out):
         self.out = out
 
-    def with_structured_output(self, _):
-        return self
-
     def invoke(self, *_):
         return self.out
 
@@ -42,14 +39,13 @@ def _png():
 
 
 def test_full_flow(monkeypatch):
-    monkeypatch.setattr(graph, "init_chat_model", lambda *a, **k: FakeLLM(EXTRACTION))
-    monkeypatch.setattr(summarize, "init_chat_model", lambda *a, **k: FakeLLM(SUMMARY))
+    monkeypatch.setattr(graph, "structured", lambda *a: FakeLLM(EXTRACTION))
+    monkeypatch.setattr(summarize, "structured", lambda *a: FakeLLM(SUMMARY))
     with TestClient(app) as c:
-        h = {}
-        assert c.post("/documents", headers=h, files={"file": ("a.txt", b"x", "text/plain")}).status_code == 415
+        assert c.post("/documents", files={"file": ("a.txt", b"x", "text/plain")}).status_code == 415
 
-        r = c.post("/documents", headers=h, files={"file": ("a.png", _png(), "image/png")})
-        d = c.get(f"/documents/{r.json()['id']}", headers=h).json()
+        r = c.post("/documents", files={"file": ("a.png", _png(), "image/png")})
+        d = c.get(f"/documents/{r.json()['id']}").json()
         assert d["status"] == "done", d["extraction"]
         hb = next(o for o in d["observations"] if o["loinc_code"] == "718-7")
         assert hb["interpretation"] == "L"  # female range 12-15
@@ -60,35 +56,61 @@ def test_full_flow(monkeypatch):
         assert tests[0] == "Potassium" and "Haemoglobin" in tests and "Invented Test" not in tests
         assert "contact a doctor promptly" in d["summary"]["abnormal_explanations"][0]["what_it_means"]
 
-        assert c.get(f"/documents/{d['id']}/file", headers=h).status_code == 200
-        prof = c.get("/profile", headers=h).json()
+        assert c.get(f"/documents/{d['id']}/file").status_code == 200
+        prof = c.get("/profile").json()
         assert prof["conditions"] == ["Anaemia"]
-        kinds = {i["type"] for i in c.get("/profile/timeline", headers=h).json()}
+        kinds = {i["type"] for i in c.get("/profile/timeline").json()}
         assert {"document", "abnormal_result", "diagnosis", "medicine_started"} <= kinds
-        only = c.get("/profile/timeline?types=diagnoses", headers=h).json()
+        only = c.get("/profile/timeline?types=diagnoses").json()
         assert {i["type"] for i in only} == {"diagnosis"}
 
-        assert c.post("/abha/import", headers=h).status_code == 409
-        assert c.post("/abha/link", headers=h, json={"abha": "bad"}).status_code == 422
-        otp = c.post("/abha/link", headers=h, json={"abha": "12-3456-7890-1234"}).json()["demo_otp"]
-        assert c.post("/abha/verify", headers=h, json={"otp": "000000"}).status_code == 401
-        assert c.post("/abha/verify", headers=h, json={"otp": otp}).status_code == 200
-        assert len(c.post("/abha/import", headers=h).json()["imported_document_ids"]) == 2
-        assert c.post("/abha/import", headers=h).json()["imported_document_ids"] == []  # idempotent
-        assert any(i["source"] == "abdm" for i in c.get("/profile/timeline", headers=h).json())
+        assert c.post("/abha/import").status_code == 409
+        assert c.post("/abha/link", json={"abha": "bad"}).status_code == 422
+        otp = c.post("/abha/link", json={"abha": "12-3456-7890-1234"}).json()["demo_otp"]
+        assert c.post("/abha/verify", json={"otp": "000000"}).status_code == 401
+        assert c.post("/abha/verify", json={"otp": otp}).status_code == 200
+        assert len(c.post("/abha/import").json()["imported_document_ids"]) == 2
+        assert c.post("/abha/import").json()["imported_document_ids"] == []  # idempotent
+        assert any(i["source"] == "abdm" for i in c.get("/profile/timeline").json())
 
-        Bundle.model_validate(c.get("/profile/fhir", headers=h).json())
-        assert c.delete("/profile", headers=h).status_code == 204
-        assert c.get("/documents", headers=h).json() == []  # data gone; a fresh demo profile is recreated
+        Bundle.model_validate(c.get("/profile/fhir").json())
+        assert c.delete("/profile").status_code == 204
+        assert c.get("/documents").json() == []  # data gone; a fresh demo profile is recreated
 
 
 def test_extraction_failure_marks_failed(monkeypatch):
+    calls = []
+
     class Boom(FakeLLM):
         def invoke(self, *_):
+            calls.append(1)
             raise RuntimeError("api down")
-    monkeypatch.setattr(graph, "init_chat_model", lambda *a, **k: Boom(None))
+    monkeypatch.setattr(graph, "structured", lambda *a: Boom(None))
     with TestClient(app) as c:
-        h = {}
-        r = c.post("/documents", headers=h, files={"file": ("a.png", _png(), "image/png")})
-        d = c.get(f"/documents/{r.json()['id']}", headers=h).json()
+        r = c.post("/documents", files={"file": ("a.png", _png(), "image/png")})
+        d = c.get(f"/documents/{r.json()['id']}").json()
         assert d["status"] == "failed" and "api down" in d["extraction"]["_error"]
+        assert len(calls) == 2  # one retry, then give up
+
+
+def test_digital_pdf_skips_images_and_pretranslates(monkeypatch):
+    import pymupdf
+    pdf = pymupdf.open()
+    pdf.new_page().insert_textbox(pymupdf.Rect(72, 72, 520, 700), "Hemoglobin 10.8 g/dL reference 12-15 " * 10)  # digital page
+    pdf.new_page()  # blank page stands in for a scan
+    sent = {}
+
+    class Spy(FakeLLM):
+        def invoke(self, msgs):
+            sent["kinds"] = [b["type"] for b in msgs[0].content]
+            return self.out
+    monkeypatch.setattr(graph, "structured", lambda *a: Spy(EXTRACTION))
+    monkeypatch.setattr(summarize, "structured", lambda *a: FakeLLM(SUMMARY))
+    with TestClient(app) as c:
+        c.put("/profile", json={"preferred_language": "hi"})
+        r = c.post("/documents", files={"file": ("a.pdf", pdf.tobytes(), "application/pdf")})
+        d = c.get(f"/documents/{r.json()['id']}").json()
+        assert d["status"] == "done" and sent["kinds"] == ["text", "image"]  # only the blank page went as an image
+        doc = summarize.SessionLocal().get(summarize.Document, d["id"])
+        assert "hi" in doc.summary_i18n  # ready before the reader asks
+        c.delete("/profile")

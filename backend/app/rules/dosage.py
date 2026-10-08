@@ -43,7 +43,7 @@ def parse_dose(pattern: str | None) -> dict:
         out["per_day"] = freq or len(slots) or None
     if _has(text, T["as_needed"]):
         out["as_needed"] = True
-    food = "after food" if _has(text, T["after_food"]) else "before food" if _has(text, T["before_food"]) else None
+    food = food_timing(text)
     out["timing"] = ", ".join(slots + ([food] if food else [])) or None
     return out
 

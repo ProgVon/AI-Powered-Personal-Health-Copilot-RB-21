@@ -20,6 +20,7 @@ async def lifespan(app: FastAPI):
     with SessionLocal() as db:  # background tasks die with the server; don't leave documents 'processing' forever
         db.execute(update(Document).where(Document.status == "processing")
                    .values(status="failed", extraction={"_error": "interrupted by server restart"}))
+        db.execute(update(Document).where(Document.status == "summarizing").values(status="done"))  # data is saved
         db.commit()
     yield
 

@@ -1,18 +1,22 @@
-import { useCallback, useEffect, useState } from "react";
-import { NavLink, Outlet, Route, Routes } from "react-router-dom";
+"use client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, Profile } from "./api";
+import { ToastProvider } from "./components/Toast";
 import Icon, { IconName } from "./components/Icon";
 import { EmptyState, Segmented } from "./components/ui";
 import { LANGS, Lang } from "./i18n";
-import { useTheme } from "./theme";
-import Abha from "./pages/Abha";
-import DocumentDetail from "./pages/DocumentDetail";
-import Home from "./pages/Home";
-import TimelinePage from "./pages/TimelinePage";
-import Upload from "./pages/Upload";
 
-export type Ctx = { profile: Profile | null; reload: () => void };
+const ProfileCtx = createContext<{ profile: Profile | null; reload: () => void }>({ profile: null, reload: () => {} });
+export const useProfile = () => useContext(ProfileCtx);
+
+function NavLink({ to, end, className, children }: { to: string; end?: boolean; className: string | ((s: { isActive: boolean }) => string); children: ReactNode }) {
+  const path = usePathname();
+  const isActive = end ? path === to : path.startsWith(to);
+  return <Link href={to} className={typeof className === "function" ? className({ isActive }) : className}>{children}</Link>;
+}
 const NAV: { to: string; icon: IconName; key: string; end?: boolean }[] = [
   { to: "/", icon: "home", key: "home", end: true }, { to: "/upload", icon: "upload", key: "upload" },
   { to: "/timeline", icon: "activity", key: "timeline" }, { to: "/abha", icon: "shield", key: "abha" },
@@ -25,6 +29,15 @@ function Logo() {
       <span className="h-display text-lg font-semibold leading-none">Health<br /><span className="text-brand">Copilot</span></span>
     </div>
   );
+}
+
+function useTheme() {
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    try { localStorage.setItem("theme-v2", dark ? "dark" : "light"); } catch { /* private mode */ }
+  }, [dark]);
+  return { dark, toggle: () => setDark((d) => !d) };
 }
 
 function Controls() {
@@ -46,7 +59,7 @@ function Controls() {
   );
 }
 
-function Layout() {
+function Layout({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [down, setDown] = useState(false);
@@ -80,7 +93,7 @@ function Layout() {
           <Logo /><Controls />
         </header>
         <main id="main" className="mx-auto max-w-5xl px-4 py-6 md:px-10 md:py-10">
-          {down ? <EmptyState icon="alert" title={t("serverDown")} sub={t("serverDownSub")} /> : <Outlet context={{ profile, reload } satisfies Ctx} />}
+          {down ? <EmptyState icon="alert" title={t("serverDown")} sub={t("serverDownSub")} /> : <ProfileCtx.Provider value={{ profile, reload }}>{children}</ProfileCtx.Provider>}
         </main>
       </div>
 
@@ -95,16 +108,6 @@ function Layout() {
   );
 }
 
-export default function App() {
-  return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route index element={<Home />} />
-        <Route path="upload" element={<Upload />} />
-        <Route path="documents/:id" element={<DocumentDetail />} />
-        <Route path="timeline" element={<TimelinePage />} />
-        <Route path="abha" element={<Abha />} />
-      </Route>
-    </Routes>
-  );
+export default function Shell({ children }: { children: ReactNode }) {
+  return <ToastProvider><Layout>{children}</Layout></ToastProvider>;
 }

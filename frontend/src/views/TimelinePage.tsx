@@ -1,5 +1,6 @@
+"use client";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { api, TimelineItem } from "../api";
 import Icon, { IconName } from "../components/Icon";
@@ -32,7 +33,7 @@ export default function TimelinePage() {
       </div>
       {items === null ? <div className="space-y-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20" />)}</div>
         : items.length === 0 ? <EmptyState icon="activity" title={t("noItems")} sub={t("noItemsSub")}>
-            <Link to="/upload" className="btn btn-primary mt-2"><Icon name="upload" className="h-4 w-4" />{t("nav.upload")}</Link></EmptyState>
+            <Link href="/upload" className="btn btn-primary mt-2"><Icon name="upload" className="h-4 w-4" />{t("nav.upload")}</Link></EmptyState>
         : <Timeline items={items} />}
     </div>
   );

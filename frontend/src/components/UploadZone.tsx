@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { api } from "../api";
 import Icon from "./Icon";
@@ -34,10 +34,10 @@ export default function UploadZone() {
       try {
         const { id } = await api.upload(f);
         patch(key, { id, stage: "reading" });
-        const timer = window.setInterval(async () => {  // poll every 2 s
+        const timer = window.setInterval(async () => {  // results are viewable once extraction is done
           const d = await api.doc(id).catch(() => null);
-          if (d && d.status !== "processing") { clearInterval(timer); patch(key, { stage: d.status as Stage }); }
-        }, 2000);
+          if (d && d.status !== "processing") { clearInterval(timer); patch(key, { stage: d.status === "failed" ? "failed" : "done" }); }
+        }, 1000);
         timers.current.push(timer);
       } catch (e) { patch(key, { stage: "failed", error: (e as Error).message }); toast((e as Error).message, true); }
     }
@@ -92,7 +92,7 @@ export default function UploadZone() {
                     ? <p role="alert" className="mt-1.5 flex items-center gap-1.5 text-sm text-crit"><Icon name="alert" className="h-4 w-4" />{i.error ?? t("failedSub")}</p>
                     : <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-ok"><span className="pop"><Icon name="check" className="h-4 w-4" strokeWidth={2.6} /></span>{t("ready")}</p>}
               </div>
-              {i.stage === "done" && i.id && <Link className="btn btn-soft" to={`/documents/${i.id}`}>{t("viewSummary")}<Icon name="chevron" className="h-4 w-4" /></Link>}
+              {i.stage === "done" && i.id && <Link className="btn btn-soft" href={`/documents/${i.id}`}>{t("viewSummary")}<Icon name="chevron" className="h-4 w-4" /></Link>}
             </li>))}
         </ul>)}
 

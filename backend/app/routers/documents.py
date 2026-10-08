@@ -25,8 +25,8 @@ def _own(db: Session, profile: Profile, doc_id: int) -> Document:
     return doc
 
 
-def _row(o, skip=("profile_id",)):
-    return {c.name: getattr(o, c.name) for c in o.__table__.columns if c.name not in skip}
+def _row(o):
+    return {c.name: getattr(o, c.name) for c in o.__table__.columns if c.name != "profile_id"}
 
 
 def doc_brief(d: Document) -> dict:

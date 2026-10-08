@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import type { TimelineItem } from "../api";
 import Icon, { IconName } from "./Icon";
@@ -31,7 +31,7 @@ export default function Timeline({ items }: { items: TimelineItem[] }) {
                     style={{ background: tone === "muted" ? "var(--line)" : `var(--${tone}-soft)`, color: tone === "muted" ? "var(--muted)" : `var(--${tone})` }}>
                     <Icon name={kind.icon} className="h-4 w-4" />
                   </span>
-                  <Link to={`/documents/${i.document_id}`} className="card group flex items-center gap-3 p-4 transition hover:-translate-y-0.5 hover:border-brand/40">
+                  <Link href={`/documents/${i.document_id}`} className="card group flex items-center gap-3 p-4 transition hover:-translate-y-0.5 hover:border-brand/40">
                     <div className="min-w-0 flex-1">
                       <p className="eyebrow">{t(`tl.${i.type}`)}</p>
                       <p className="mt-0.5 truncate font-semibold">{title}</p>

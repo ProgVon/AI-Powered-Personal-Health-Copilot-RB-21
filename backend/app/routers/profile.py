@@ -2,7 +2,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from ..auth import current_profile
@@ -31,11 +31,10 @@ def _age(dob: date | None) -> int | None:
 
 def _profile_json(p: Profile, db: Session) -> dict:
     today = date.today()
-    q = lambda m: db.scalars(select(m).where(m.profile_id == p.id))  # noqa: E731
-    meds = [m for m in q(Medication) if m.end_date is None or m.end_date >= today]  # "current" is computed
+    q = lambda m, *w: db.scalars(select(m).where(m.profile_id == p.id, *w))  # noqa: E731
+    meds = q(Medication, or_(Medication.end_date.is_(None), Medication.end_date >= today))  # "current" is computed
     latest: dict[str, Observation] = {}
-    for o in sorted((o for o in q(Observation) if o.interpretation in ABNORMAL),
-                    key=lambda o: o.effective_at or date.min):
+    for o in sorted(q(Observation, Observation.interpretation.in_(ABNORMAL)), key=lambda o: o.effective_at or date.min):
         latest[o.display_name] = o
     return {
         "name": p.name, "dob": p.dob, "age": _age(p.dob), "sex": p.sex, "language": p.user.preferred_language,
@@ -78,31 +77,28 @@ def timeline(types: str = "reports,medicines,diagnoses", date_from: date | None 
              p: Profile = Depends(current_profile), db: Session = Depends(get_db)):
     want = set(types.split(","))
     items = []
-    q = lambda m: db.scalars(select(m).where(m.profile_id == p.id))  # noqa: E731
+    q = lambda m, *w: db.scalars(select(m).where(m.profile_id == p.id, *w))  # noqa: E731
+    docs = {d.id: d for d in q(Document)}  # one query, shared by every section
     if "reports" in want:
-        for d in q(Document):
+        for d in docs.values():
             if d.status == "done":
                 items.append({"type": "document", "date": d.doc_date or d.created_at.date(), "document_id": d.id,
                               "title": (d.doc_type or "document").replace("_", " "), "detail": d.facility,
                               "source": d.source})
-        docs = {d.id: d.source for d in q(Document)}
-        for o in q(Observation):
-            if o.interpretation in ABNORMAL:
-                items.append({"type": "abnormal_result", "date": o.effective_at, "document_id": o.document_id,
-                              "title": o.display_name, "detail": f"{o.value_num} {o.unit or ''}".strip(),
-                              "interpretation": o.interpretation, "source": docs.get(o.document_id)})
+        for o in q(Observation, Observation.interpretation.in_(ABNORMAL)):
+            items.append({"type": "abnormal_result", "date": o.effective_at, "document_id": o.document_id,
+                          "title": o.display_name, "detail": f"{o.value_num} {o.unit or ''}".strip(),
+                          "interpretation": o.interpretation, "source": docs[o.document_id].source})
     if "medicines" in want:
-        docs = {d.id: d.source for d in q(Document)}
         for m in q(Medication):
-            base = {"document_id": m.document_id, "title": m.brand_name, "source": docs.get(m.document_id)}
+            base = {"document_id": m.document_id, "title": m.brand_name, "source": docs[m.document_id].source}
             items.append({**base, "type": "medicine_started", "date": m.start_date, "detail": m.dose_pattern})
             if m.end_date:
                 items.append({**base, "type": "medicine_ended", "date": m.end_date, "detail": None})
     if "diagnoses" in want:
-        docs = {d.id: d.source for d in q(Document)}
         for c in q(Condition):
             items.append({"type": "diagnosis", "date": c.recorded_at, "document_id": c.document_id,
-                          "title": c.name, "detail": None, "source": docs.get(c.document_id)})
+                          "title": c.name, "detail": None, "source": docs[c.document_id].source})
     items = [i for i in items if i["date"] and (not date_from or i["date"] >= date_from)
              and (not date_to or i["date"] <= date_to)]
     return sorted(items, key=lambda i: i["date"], reverse=True)

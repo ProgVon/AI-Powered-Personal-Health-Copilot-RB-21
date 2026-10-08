@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Icon, { IconName } from "./Icon";
 
-export type Tone = "ok" | "low" | "high" | "crit" | "brand" | "med" | "dx" | "neutral";
+type Tone = "ok" | "low" | "high" | "crit" | "brand" | "med" | "dx" | "neutral";
 
 const TONE: Record<Tone, string> = {
   ok: "bg-ok-soft text-ok", low: "bg-low-soft text-low", high: "bg-high-soft text-high", crit: "bg-crit-soft text-crit",
@@ -27,8 +27,6 @@ export function Badge({ tone = "neutral", icon, children }: { tone?: Tone; icon?
     </span>
   );
 }
-
-export const TONE_TILE = TONE;
 
 export const Skeleton = ({ className = "h-4 w-full" }: { className?: string }) => <div className={`skeleton ${className}`} aria-hidden />;
 

@@ -23,8 +23,8 @@ def db():
         yield s
 
 
-def _profile(db, email="a@x.com"):
-    u = m.User(email=email, password_hash="x")
+def _profile(db):
+    u = m.User()
     u.profile = m.Profile(name="Sunita Devi", dob=date(1990, 1, 1), sex="female", abha_number="12-3456-7890-1234")
     db.add(u)
     db.commit()
@@ -56,7 +56,7 @@ def test_export_is_valid_fhir_and_round_trips(db):
     comp = next(e["resource"] for e in bundle["entry"] if e["resource"]["resourceType"] == "Composition")
     assert comp["type"]["text"] == "DischargeSummaryRecord"
 
-    q = _profile(db, "b@x.com")
+    q = _profile(db)
     back = import_bundle(db, q, bundle, "abdm:roundtrip")
     assert back.doc_type == "discharge_summary" and back.admission_date == date(2026, 4, 28)
     hb = next(o for o in back.observations if o.loinc_code == "718-7")

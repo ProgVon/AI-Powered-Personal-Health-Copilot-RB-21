@@ -26,8 +26,8 @@
   --color-ok: var(--ok); --color-ok-soft: var(--ok-soft); --color-low: var(--low); --color-low-soft: var(--low-soft);
   --color-high: var(--high); --color-high-soft: var(--high-soft); --color-crit: var(--crit); --color-crit-soft: var(--crit-soft);
   --color-med: var(--med); --color-med-soft: var(--med-soft); --color-dx: var(--dx); --color-dx-soft: var(--dx-soft);
-  --font-sans: "Inter", "Noto Sans Devanagari", "Noto Sans Telugu", system-ui, sans-serif;
-  --font-display: "Fraunces", "Noto Sans Devanagari", "Noto Sans Telugu", Georgia, serif;
+  --font-sans: Arial, Helvetica, "Noto Sans Devanagari", "Noto Sans Telugu", sans-serif;
+  --font-display: var(--font-sans);
   --shadow-card: var(--shadow);
 }
 
@@ -48,7 +48,6 @@ body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); 
   .h-display { font-family: var(--font-display); font-optical-sizing: auto; letter-spacing: -.01em; }
 }
 
-.font-arial, .font-arial .h-display { font-family: Arial, Helvetica, "Noto Sans Devanagari", "Noto Sans Telugu", sans-serif; }
 
 @keyframes fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes shimmer { to { background-position: -200% 0; } }

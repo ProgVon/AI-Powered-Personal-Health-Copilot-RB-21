@@ -1,20 +1,16 @@
 from datetime import date, datetime
 
 from sqlalchemy import JSON, Date, DateTime, Float, ForeignKey, Integer, String, func
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
 
-J = JSON().with_variant(JSONB, "postgresql")
 CASCADE = "all, delete-orphan"
 
 
 class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(primary_key=True)
-    email: Mapped[str] = mapped_column(String, unique=True)
-    password_hash: Mapped[str]
     preferred_language: Mapped[str] = mapped_column(String, default="en")
     profile: Mapped["Profile"] = relationship(back_populates="user", cascade=CASCADE, uselist=False)
 
@@ -45,10 +41,10 @@ class Document(Base):  # FHIR DocumentReference + Composition
     practitioner: Mapped[str | None]
     admission_date: Mapped[date | None]
     discharge_date: Mapped[date | None]
-    status: Mapped[str] = mapped_column(String, default="processing")  # processing | done | failed
-    extraction: Mapped[dict | None] = mapped_column(J)
-    summary: Mapped[dict | None] = mapped_column(J)
-    summary_i18n: Mapped[dict | None] = mapped_column(J)
+    status: Mapped[str] = mapped_column(String, default="processing")  # processing | summarizing | done | failed
+    extraction: Mapped[dict | None] = mapped_column(JSON)
+    summary: Mapped[dict | None] = mapped_column(JSON)
+    summary_i18n: Mapped[dict | None] = mapped_column(JSON)
     source: Mapped[str] = mapped_column(String, default="upload")  # upload | abdm
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     observations: Mapped[list["Observation"]] = relationship(cascade=CASCADE)

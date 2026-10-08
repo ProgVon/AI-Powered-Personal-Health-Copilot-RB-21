@@ -10,7 +10,7 @@ def current_profile(db: Session = Depends(get_db)) -> Profile:
     """No login: everyone is the single local demo user, created on first use."""
     p = db.scalar(select(Profile))
     if not p:
-        user = User(email="demo@local", password_hash="")
+        user = User()
         user.profile = Profile(name="Demo User")
         db.add(user)
         db.commit()

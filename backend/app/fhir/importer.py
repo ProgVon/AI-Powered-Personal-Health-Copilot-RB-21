@@ -1,5 +1,5 @@
 """FHIR Bundle -> rows (ABHA import). Handles the resource types serialize.py emits."""
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -49,7 +49,7 @@ def import_bundle(db: Session, p: Profile, bundle: dict, source_key: str) -> Doc
         parsed = parse_dose(dose)
         db.add(Medication(**ids, brand_name=m["medicationCodeableConcept"].get("text", "Medicine"), dose_pattern=dose,
                           per_day=parsed["per_day"], timing=parsed["timing"], duration_days=days, start_date=start,
-                          end_date=date.fromordinal(start.toordinal() + int(days)) if start and days else None,
+                          end_date=start + timedelta(days=int(days)) if start and days else None,
                           prescriber=(m.get("requester") or {}).get("display")))
     for c in r.get("Condition", []):
         db.add(Condition(**ids, name=c["code"].get("text", "Condition"), recorded_at=_d(c.get("recordedDate"))))

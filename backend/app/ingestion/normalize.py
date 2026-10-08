@@ -1,13 +1,19 @@
 """The accuracy layer: pure Python, no LLM. Everything medical that must be exactly right happens here."""
 import re
 from datetime import date, timedelta
-
-from rapidfuzz import fuzz
+from difflib import SequenceMatcher
 
 from ..rules import dosage, formulary, lab_catalog as labs
 
 NUM = r"-?\d+(?:\.\d+)?"
 TITLES = re.compile(r"\b(mr|mrs|ms|miss|dr|smt|shri|shrimati|master|baby)\b\.?", re.I)
+
+
+def same_person(a: str, b: str) -> bool:
+    """Names match if one's words contain the other's, or they're close once titles are dropped and words sorted."""
+    wa, wb = (set(TITLES.sub("", x).lower().replace(".", " ").split()) for x in (a, b))
+    return not wa or not wb or wa <= wb or wb <= wa or \
+        SequenceMatcher(None, " ".join(sorted(wa)), " ".join(sorted(wb))).ratio() >= 0.7
 
 
 def parse_date(s: str | None) -> date | None:
@@ -114,7 +120,7 @@ def normalize_record(ex: dict, name: str, dob: date | None, sex: str | None,
     doc_date = check_date("document date", ex.get("doc_date"))
     adm, dis = check_date("admission date", ex.get("admission_date")), check_date("discharge date", ex.get("discharge_date"))
     pn = ex.get("patient_name")
-    if pn and fuzz.token_set_ratio(TITLES.sub("", pn).strip().lower(), TITLES.sub("", name).strip().lower()) < 70:
+    if pn and not same_person(pn, name):
         warnings.append(f"This report seems to be for {pn}.")
     record = {
         "doc_type": ex["doc_type"], "doc_date": doc_date, "facility": ex.get("facility"),

@@ -12,7 +12,6 @@ langchain-google-genai
 langchain-openai
 pymupdf
 pillow
-rapidfuzz
 fhir.resources
 pytest
 httpx

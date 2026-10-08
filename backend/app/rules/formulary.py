@@ -1,9 +1,8 @@
 import csv
 import re
+from difflib import get_close_matches
 from functools import lru_cache
 from pathlib import Path
-
-from rapidfuzz import fuzz, process
 
 FORMS = r"\b(tab|tablet|tablets|cap|capsule|capsules|syp|syrup|inj|injection)\b\.?"
 
@@ -24,5 +23,5 @@ def match(name: str) -> dict | None:
     idx, k = formulary(), _key(name)
     if k in idx:
         return idx[k]
-    hit = process.extractOne(k, idx.keys(), scorer=fuzz.ratio, score_cutoff=85)
+    hit = get_close_matches(k, idx, n=1, cutoff=0.85)
     return idx[hit[0]] if hit else None

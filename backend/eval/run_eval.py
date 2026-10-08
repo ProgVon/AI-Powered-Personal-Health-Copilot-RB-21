@@ -12,31 +12,17 @@ from pathlib import Path
 from app.ingestion.normalize import normalize_record
 from app.rules import safety_text
 from app.ingestion.summarize import build_summary
-from app.ingestion.graph import _image_block, extract
-from app.ingestion.prompts import EXTRACT_PROMPT  # noqa: F401  (documented dependency of extract)
+from app.ingestion.graph import extract
+from app.ingestion.prepare import prepare_file
 
 GOLD = Path(__file__).parent / "gold"
 norm = lambda s: " ".join(str(s or "").lower().split())  # noqa: E731
 
 
 def pages_for(f: Path) -> tuple[list[str], str]:
-    """Same preparation as the agent's `prepare` node, without needing a DB row."""
-    import pymupdf as fitz
-    from PIL import Image, ImageOps
     out = f.parent / ".prepared" / f.stem
     out.mkdir(parents=True, exist_ok=True)
-    if f.suffix == ".pdf":
-        paths, text = [], []
-        with fitz.open(f) as pdf:
-            for i, pg in enumerate(list(pdf)[:10]):
-                text.append(pg.get_text())
-                pg.get_pixmap(dpi=170).save(out / f"p{i}.png")
-                paths.append(str(out / f"p{i}.png"))
-        return paths, "\n".join(text)
-    img = ImageOps.exif_transpose(Image.open(f)).convert("RGB")
-    img.thumbnail((2048, 2048))
-    img.save(out / "p0.png")
-    return [str(out / "p0.png")], ""
+    return prepare_file(f, "application/pdf" if f.suffix == ".pdf" else "image", out)
 
 
 def score(pred: dict, gold: dict, acc: dict[str, list[int]]):
@@ -65,9 +51,10 @@ def main():
         if not src:
             continue
         paths, text = pages_for(src)
-        state = extract({"text_layer": text, "page_paths": paths, "attempts": 0})
-        if not state["extraction"]:
-            print(f"{lf.stem}: extraction failed ({state.get('error')})")
+        try:
+            state = extract({"text_layer": text, "page_paths": paths})
+        except Exception as e:
+            print(f"{lf.stem}: extraction failed ({e})")
             continue
         n += 1
         score(state["extraction"], gold, by_cat[gold.get("category", "printed")])
