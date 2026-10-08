@@ -310,6 +310,13 @@ python -m eval.run_eval     # field-level accuracy on a labelled gold set in eva
 
 ---
 
+## 📄 Example documents
+
+The `examples/` folder contains 5 example PDFs (`medical_certificate_1.pdf` to `medical_certificate_5.pdf`).
+They are fictional cartoon medical certificates for trying out document upload and contain no real patient data.
+
+---
+
 ## ⚠️ Disclaimer
 
 This project helps people **understand** their records. It does not provide diagnosis or treatment
