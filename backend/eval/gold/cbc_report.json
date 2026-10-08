@@ -1,0 +1,60 @@
+{
+  "category": "printed",
+  "sex": "female",
+  "doc_type": "lab_report",
+  "doc_date": "2026-08-14",
+  "patient_name": "Meera Iyer",
+  "facility": "Sunrise Diagnostics, Pune",
+  "practitioner": "Dr. A. Kulkarni",
+  "lab_results": [
+    {
+      "test_name": "Haemoglobin",
+      "value": "10.2",
+      "unit": "g/dL",
+      "ref_range": "12.0 - 15.0",
+      "flag_on_report": "L"
+    },
+    {
+      "test_name": "Total Leucocyte Count",
+      "value": "7800",
+      "unit": "/cumm",
+      "ref_range": "4000 - 11000",
+      "flag_on_report": null
+    },
+    {
+      "test_name": "RBC Count",
+      "value": "3.9",
+      "unit": "millions/cumm",
+      "ref_range": "4.1 - 5.1",
+      "flag_on_report": "L"
+    },
+    {
+      "test_name": "PCV",
+      "value": "32.5",
+      "unit": "%",
+      "ref_range": "36 - 46",
+      "flag_on_report": "L"
+    },
+    {
+      "test_name": "MCV",
+      "value": "78",
+      "unit": "fL",
+      "ref_range": "80 - 100",
+      "flag_on_report": "L"
+    },
+    {
+      "test_name": "Platelet Count",
+      "value": "2.4",
+      "unit": "lakhs/cumm",
+      "ref_range": "1.5 - 4.5",
+      "flag_on_report": null
+    },
+    {
+      "test_name": "ESR",
+      "value": "28",
+      "unit": "mm/hr",
+      "ref_range": "0 - 20",
+      "flag_on_report": "H"
+    }
+  ]
+}

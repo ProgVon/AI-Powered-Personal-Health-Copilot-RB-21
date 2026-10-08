@@ -12,13 +12,8 @@ import { LANGS, Lang } from "./i18n";
 const ProfileCtx = createContext<{ profile: Profile | null; reload: () => void }>({ profile: null, reload: () => {} });
 export const useProfile = () => useContext(ProfileCtx);
 
-function NavLink({ to, end, className, children }: { to: string; end?: boolean; className: string | ((s: { isActive: boolean }) => string); children: ReactNode }) {
-  const path = usePathname();
-  const isActive = end ? path === to : path.startsWith(to);
-  return <Link href={to} className={typeof className === "function" ? className({ isActive }) : className}>{children}</Link>;
-}
-const NAV: { to: string; icon: IconName; key: string; end?: boolean }[] = [
-  { to: "/", icon: "home", key: "home", end: true }, { to: "/upload", icon: "upload", key: "upload" },
+const NAV: { to: string; icon: IconName; key: string }[] = [
+  { to: "/", icon: "home", key: "home" }, { to: "/upload", icon: "upload", key: "upload" },
   { to: "/timeline", icon: "activity", key: "timeline" }, { to: "/abha", icon: "shield", key: "abha" },
 ];
 
@@ -65,8 +60,10 @@ function Layout({ children }: { children: ReactNode }) {
   const [down, setDown] = useState(false);
   const reload = useCallback(() => { api.profile().then((p) => { setProfile(p); setDown(false); }).catch(() => setDown(true)); }, []);
   useEffect(reload, [reload]);
-  const link = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition ${isActive ? "bg-brand-soft text-brand-strong" : "text-muted hover:bg-surface-2 hover:text-ink"}`;
+  const path = usePathname();
+  const active = (n: (typeof NAV)[number]) => (n.to === "/" ? path === n.to : path.startsWith(n.to));
+  const link = (on: boolean) =>
+    `flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition ${on ? "bg-brand-soft text-brand-strong" : "text-muted hover:bg-surface-2 hover:text-ink"}`;
   const abha = profile?.abha;
   return (
     <div className="app-shell min-h-screen md:grid md:grid-cols-[17rem_1fr]">
@@ -75,15 +72,15 @@ function Layout({ children }: { children: ReactNode }) {
       <aside className="no-print sticky top-0 hidden h-screen flex-col gap-6 border-r border-line bg-surface/70 p-5 backdrop-blur md:flex">
         <Logo />
         <nav className="flex flex-col gap-1">
-          {NAV.map((n) => <NavLink key={n.to} to={n.to} end={n.end} className={link}><Icon name={n.icon} />{t(`nav.${n.key}`)}</NavLink>)}
+          {NAV.map((n) => <Link key={n.to} href={n.to} className={link(active(n))}><Icon name={n.icon} />{t(`nav.${n.key}`)}</Link>)}
         </nav>
         <div className="mt-auto space-y-4">
-          <NavLink to="/abha" className="card block space-y-1 p-3.5 transition hover:border-brand/40">
+          <Link href="/abha" className="card block space-y-1 p-3.5 transition hover:border-brand/40">
             <p className="eyebrow flex items-center gap-1.5"><Icon name="shield" className="h-3.5 w-3.5" />{t("yourAbha")}</p>
             <p className={`text-sm font-semibold ${abha?.linked ? "text-ok" : "text-muted"}`}>
               {abha?.linked ? `✓ ${t("abhaLinked")}` : abha?.number || abha?.address ? t("abhaPending") : t("abhaNotLinked")}
             </p>
-          </NavLink>
+          </Link>
           <Controls />
         </div>
       </aside>
@@ -99,10 +96,10 @@ function Layout({ children }: { children: ReactNode }) {
 
       <nav aria-label="Primary" className="no-print fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 gap-1 rounded-2xl border border-line bg-surface/95 p-1.5 shadow-card backdrop-blur md:hidden">
         {NAV.map((n) => (
-          <NavLink key={n.to} to={n.to} end={n.end}
-            className={({ isActive }) => `flex flex-col items-center gap-0.5 rounded-xl py-2 text-[11px] font-semibold ${isActive ? "bg-brand-soft text-brand-strong" : "text-muted"}`}>
+          <Link key={n.to} href={n.to}
+            className={`flex flex-col items-center gap-0.5 rounded-xl py-2 text-[11px] font-semibold ${active(n) ? "bg-brand-soft text-brand-strong" : "text-muted"}`}>
             <Icon name={n.icon} />{t(`nav.${n.key}`)}
-          </NavLink>))}
+          </Link>))}
       </nav>
     </div>
   );

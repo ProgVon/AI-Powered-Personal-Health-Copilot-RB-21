@@ -1,0 +1,51 @@
+{
+  "category": "printed",
+  "sex": "female",
+  "doc_type": "prescription",
+  "doc_date": "2026-09-03",
+  "patient_name": "Sunita Sharma",
+  "facility": "Shanti Clinic, Jaipur",
+  "practitioner": "Dr. R. K. Mehta",
+  "diagnoses": [
+    {
+      "name": "Type 2 Diabetes Mellitus"
+    },
+    {
+      "name": "Hypertension"
+    }
+  ],
+  "medications": [
+    {
+      "name": "Glycomet GP 1",
+      "strength": "500 mg + 1 mg",
+      "dose_pattern": "1-0-1",
+      "duration": "30 days",
+      "timing": "after food"
+    },
+    {
+      "name": "Telma 40",
+      "strength": "40 mg",
+      "dose_pattern": "1-0-0",
+      "duration": "30 days",
+      "timing": "before breakfast"
+    },
+    {
+      "name": "Atorva 10",
+      "strength": "10 mg",
+      "dose_pattern": "0-0-1",
+      "duration": "30 days",
+      "timing": "after dinner"
+    },
+    {
+      "name": "Ecosprin 75",
+      "strength": "75 mg",
+      "dose_pattern": "0-1-0",
+      "duration": "30 days",
+      "timing": "after lunch"
+    }
+  ],
+  "allergies": [
+    "Sulfa drugs"
+  ],
+  "follow_up": "Review after 1 month with FBS, PPBS, HbA1c"
+}

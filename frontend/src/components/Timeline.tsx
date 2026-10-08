@@ -12,7 +12,7 @@ const KIND: Record<string, { icon: IconName; tone: string }> = {
 export default function Timeline({ items }: { items: TimelineItem[] }) {
   const { t, i18n } = useTranslation();
   const groups = new Map<string, TimelineItem[]>();
-  for (const i of items) groups.set(fmtMonth(i.date, i18n.language), [...(groups.get(fmtMonth(i.date, i18n.language)) ?? []), i]);
+  for (const i of items) { const m = fmtMonth(i.date, i18n.language); groups.set(m, [...(groups.get(m) ?? []), i]); }
   let n = 0;
   return (
     <div className="space-y-8">
@@ -23,7 +23,7 @@ export default function Timeline({ items }: { items: TimelineItem[] }) {
             {xs.map((i, k) => {
               const kind = KIND[i.type] ?? KIND.document;
               const f = i.interpretation ? FLAG[i.interpretation] : undefined;
-              const tone = f && i.type === "abnormal_result" ? (f.tone === "crit" ? "crit" : f.tone) : kind.tone;
+              const tone = f && i.type === "abnormal_result" ? f.tone : kind.tone;
               const title = i.type === "document" ? t(`docType.${i.title.replace(/ /g, "_")}`, { defaultValue: i.title }) : i.title;
               return (
                 <li key={k} className="reveal relative" style={{ ["--d" as string]: Math.min(n++, 8) }}>

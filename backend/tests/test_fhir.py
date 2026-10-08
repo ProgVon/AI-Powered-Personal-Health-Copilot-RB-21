@@ -48,7 +48,7 @@ def test_export_is_valid_fhir_and_round_trips(db):
     p.documents.append(d)
     db.commit()
 
-    bundle = to_bundle(p, db)
+    bundle = to_bundle(p)
     Bundle.model_validate(bundle)  # raises on invalid FHIR R4B
     types = [e["resource"]["resourceType"] for e in bundle["entry"]]
     assert {"Patient", "Composition", "Observation", "MedicationRequest", "Condition", "AllergyIntolerance",
@@ -71,4 +71,4 @@ def test_mock_bundles_valid_and_importable(db, f):
     Bundle.model_validate(bundle)
     doc = import_bundle(db, _profile(db), bundle, f"abdm:{f.name}")
     assert doc.source == "abdm" and (doc.observations or doc.medications)
-    Bundle.model_validate(to_bundle(doc.profile_id and db.get(m.Profile, doc.profile_id), db))
+    Bundle.model_validate(to_bundle(doc.profile_id and db.get(m.Profile, doc.profile_id)))

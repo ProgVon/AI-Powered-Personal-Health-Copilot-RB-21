@@ -4,7 +4,10 @@ dist/
 __pycache__/
 .env
 backend/storage/
-backend/eval/gold/.prepared/
 .next/
 next-env.d.ts
 *.tsbuildinfo
+*.db
+.DS_Store
+backend/eval/gold/.prepared/
+backend/eval/gold/handwritten_*

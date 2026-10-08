@@ -13,7 +13,7 @@ from .schemas import Summary
 log = logging.getLogger(__name__)
 CRITICAL_MSG = "This value is far outside the usual range. Please contact a doctor promptly."
 STATUS = {"L": "Low", "H": "High", "LL": "Critically low", "HH": "Critically high"}
-LANGS = {"hi": "Hindi", "te": "Telugu", "ta": "Tamil"}
+LANGS = {"hi": "Hindi", "te": "Telugu"}
 
 
 def _val(o: dict) -> str:

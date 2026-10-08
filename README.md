@@ -51,8 +51,27 @@ Health Copilot turns that pile of paper into something you can understand and ca
 - 📈 **Profile & timeline** — current medicines, conditions, allergies and out-of-range results at a glance
 - 🔗 **ABHA linking + FHIR R4** export and import (ABDM mocked for the demo)
 - ⚡ **Fast feedback** — extracted data appears as soon as it's read; the summary follows right after
-- 🔌 **Any LLM** — Gemini, Claude or OpenAI with one `provider:model` setting
+- 🔌 **Any LLM** — Gemini out of the box; Claude or OpenAI with one `provider:model` setting and their LangChain package
 - 🌙 Dark mode, print-friendly pages, accessible status badges (icon + text, never colour alone)
+
+---
+
+## 📄 Sample documents to try
+
+No medical records of your own? `backend/eval/gold/` has 6 ready-to-upload documents, each with a
+hand-checked label file (`.json`):
+
+| File | What it is | What it tests |
+|---|---|---|
+| `cbc_report.pdf` | Blood count report | Low haemoglobin, platelets in lakhs/cumm |
+| `kft_critical.pdf` | Kidney panel + sugar | **Critical** potassium (6.8) → fixed safety message |
+| `lipid_thyroid_scan.jpg` | Lipid + thyroid report, phone-photo style | Vision path: tilt, blur, noise |
+| `diabetes_prescription.pdf` | Printed prescription | `1-0-1` dose codes, combination brands, allergy |
+| `fever_prescription_bilingual.jpg` | Hindi / English prescription | Hindi instructions (खाने के बाद) |
+| `dengue_discharge_summary.pdf` | Hospital discharge summary | Admission/discharge dates, SOS dosing |
+
+All six are synthetic (fictional patients, clinics and doctors), generated with
+`python -m eval.make_samples`.
 
 ---
 
@@ -218,7 +237,7 @@ MedicationRequest, Condition, AllergyIntolerance), so export and import are thin
 | **Rules** | difflib (stdlib) + curated CSV catalogues | Fuzzy lab and brand matching, ranges, units |
 | **Data** | SQLAlchemy 2, psycopg 3, Supabase Postgres | Managed Postgres in production; SQLite works for local dev |
 | **Interop** | `fhir.resources` (R4B) | FHIR bundle validation and round-trip tests |
-| **Quality** | pytest, field-level eval script | Rules, FHIR validity, end-to-end API flow with a stubbed LLM |
+| **Quality** | pytest | Rules, FHIR validity, end-to-end API flow with a stubbed LLM |
 | **Hosting** | Vercel (frontend), Supabase (database) | Git-push deploys; managed Postgres |
 
 ---
@@ -243,15 +262,15 @@ npm run dev                               # http://localhost:5173
 
 | Variable | Example | Notes |
 |---|---|---|
-| `VISION_MODEL` | `google_genai:gemini-3.8-flash` | Reads the documents |
-| `TEXT_MODEL` | `google_genai:gemini-3.8-flash` | Writes summaries and translations |
+| `VISION_MODEL` | `google_genai:gemini-3.1-flash-lite` | Reads the documents (default) |
+| `TEXT_MODEL` | `google_genai:gemini-3.1-flash-lite` | Writes summaries and translations |
 | `LLM_API_KEY` | `…` | Key for whichever provider you chose |
 | `DATABASE_URL` | `sqlite:///dev.db` | Local default; Supabase in production (`postgresql+psycopg://…`) |
 | `STORAGE_DIR` | `storage` | Where uploads are kept |
 | `LLM_KWARGS` | `{"thinking_budget": 0}` | Optional provider-specific extras (e.g. faster Gemini) |
 
-Switching provider is just `anthropic:<model>` or `openai:<model>` plus that provider's key —
-`langchain-anthropic`, `langchain-google-genai` and `langchain-openai` are all installed.
+Switching provider is just `anthropic:<model>` or `openai:<model>` plus that provider's key,
+`pip install langchain-anthropic` or `pip install langchain-openai` (only Gemini's package ships in `requirements.txt`).
 
 ---
 
@@ -265,12 +284,13 @@ Switching provider is just `anthropic:<model>` or `openai:<model>` plus that pro
 
 ---
 
-## 🧪 Test & evaluate
+## 🧪 Test
 
 ```bash
 cd backend
-pytest                      # rules, FHIR validity + round-trip, full API flow with a stubbed LLM
-python -m eval.run_eval     # field-level accuracy on a labelled gold set in eval/gold/
+pip install -r requirements-dev.txt   # app deps + pytest, httpx, fhir.resources
+pytest                       # rules, FHIR validity + round-trip, full API flow with a stubbed LLM
+python -m eval.make_samples  # regenerate the 6 synthetic documents + their answer keys
 ```
 
 ---
@@ -286,15 +306,29 @@ python -m eval.run_eval     # field-level accuracy on a labelled gold set in eva
 │   │   ├── routers/       # documents, profile, abha
 │   │   └── main.py
 │   ├── data/              # lab catalogue, formulary, mock ABDM bundles
-│   ├── eval/              # extraction accuracy harness
+│   ├── eval/
+│   │   ├── gold/          # 6 sample documents + their answer keys (.json)
+│   │   └── make_samples.py  # generates the synthetic documents + answer keys
 │   └── tests/
 ├── frontend/
 │   └── src/
-│       ├── app/           # Next.js routes
-│       ├── views/         # Home, Upload, Document, Timeline, ABHA
+│       ├── app/           # Next.js routes: Home, Upload, Document, Timeline, ABHA (one page.tsx each)
 │       ├── components/    # upload zone, summary card, range gauge, timeline…
 │       └── i18n/          # en · hi · te
 ```
+
+---
+
+## 📝 Recent changes
+
+- **Frontend:** pages now live directly in Next.js App Router routes (`src/app/**/page.tsx`); the old `src/views/` folder is gone.
+- **Sample documents:** six synthetic, fictional documents with answer keys in `backend/eval/gold/`, generated by
+  `python -m eval.make_samples`. They replace the old example certificates.
+- **Removed:** the extraction-accuracy eval script, Tamil summary translation (the UI offers English / Hindi / Telugu),
+  the unused ICD-10 field on conditions and the timeline's `date_from` / `date_to` filters.
+- **Dependencies:** test tools moved to `requirements-dev.txt`; only Gemini's LangChain package is installed by default.
+- **Default model:** `google_genai:gemini-3.1-flash-lite`.
+- **Repo hygiene:** the local SQLite database and `.DS_Store` files are no longer tracked.
 
 ---
 
@@ -304,19 +338,12 @@ python -m eval.run_eval     # field-level accuracy on a labelled gold set in eva
 - [ ] User accounts with OTP sign-up
 - [ ] Clinician-reviewed lab catalogue (~50 tests) and formulary (~200 brands)
 - [ ] Medicine reminders from parsed dose schedules
-- [ ] More Indian languages (Tamil is already supported by the API)
-
----
-
-## 📄 Example documents
-
-The `examples/` folder contains 5 example PDFs (`medical_certificate_1.pdf` to `medical_certificate_5.pdf`).
-They are fictional cartoon medical certificates for trying out document upload and contain no real patient data.
+- [ ] More Indian languages
 
 ---
 
 ## ⚠️ Disclaimer
 
 This project helps people **understand** their records. It does not provide diagnosis or treatment
-advice — always consult a qualified doctor. Use synthetic or de-identified documents only; ABHA
-linking is a mock (demo OTP `123456`) until registered with the ABDM sandbox.
+advice — always consult a qualified doctor. ABHA linking is a mock (demo OTP `123456`) until
+registered with the ABDM sandbox.

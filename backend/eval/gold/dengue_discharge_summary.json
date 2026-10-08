@@ -1,0 +1,66 @@
+{
+  "category": "printed",
+  "sex": "female",
+  "doc_type": "discharge_summary",
+  "doc_date": "2026-09-12",
+  "patient_name": "Priya Nair",
+  "facility": "City General Hospital, Bengaluru",
+  "practitioner": "Dr. V. Menon",
+  "admission_date": "2026-09-08",
+  "discharge_date": "2026-09-12",
+  "diagnoses": [
+    {
+      "name": "Dengue fever with thrombocytopenia"
+    }
+  ],
+  "medications": [
+    {
+      "name": "Dolo 650",
+      "strength": "650 mg",
+      "dose_pattern": "SOS",
+      "duration": "5 days",
+      "timing": "if fever above 100°F"
+    },
+    {
+      "name": "Pan 40",
+      "strength": "40 mg",
+      "dose_pattern": "1-0-0",
+      "duration": "5 days",
+      "timing": "before breakfast"
+    },
+    {
+      "name": "Becosules",
+      "strength": null,
+      "dose_pattern": "0-1-0",
+      "duration": "15 days",
+      "timing": "after lunch"
+    }
+  ],
+  "lab_results": [
+    {
+      "test_name": "Platelet Count",
+      "value": "38000",
+      "unit": "/cumm",
+      "ref_range": "150000 - 450000",
+      "flag_on_report": "L"
+    },
+    {
+      "test_name": "Haematocrit",
+      "value": "44",
+      "unit": "%",
+      "ref_range": "36 - 46",
+      "flag_on_report": null
+    },
+    {
+      "test_name": "SGPT",
+      "value": "96",
+      "unit": "U/L",
+      "ref_range": "7 - 55",
+      "flag_on_report": "H"
+    }
+  ],
+  "allergies": [
+    "Penicillin"
+  ],
+  "follow_up": "Repeat CBC after 3 days. Return immediately if bleeding, severe abdominal pain or vomiting."
+}

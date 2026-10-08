@@ -105,7 +105,6 @@ class Condition(Base):
     profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.id"))
     document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"))
     name: Mapped[str]
-    icd10_code: Mapped[str | None]
     recorded_at: Mapped[date | None]
 
 

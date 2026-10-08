@@ -1,0 +1,53 @@
+{
+  "category": "printed",
+  "sex": "male",
+  "doc_type": "lab_report",
+  "doc_date": "2026-07-02",
+  "patient_name": "Rajesh Verma",
+  "facility": "CarePlus Labs, Lucknow",
+  "practitioner": "Dr. S. Khan",
+  "lab_results": [
+    {
+      "test_name": "Total Cholesterol",
+      "value": "246",
+      "unit": "mg/dL",
+      "ref_range": "< 200",
+      "flag_on_report": "H"
+    },
+    {
+      "test_name": "Triglycerides",
+      "value": "210",
+      "unit": "mg/dL",
+      "ref_range": "< 150",
+      "flag_on_report": "H"
+    },
+    {
+      "test_name": "HDL Cholesterol",
+      "value": "38",
+      "unit": "mg/dL",
+      "ref_range": "> 40",
+      "flag_on_report": "L"
+    },
+    {
+      "test_name": "LDL Cholesterol",
+      "value": "166",
+      "unit": "mg/dL",
+      "ref_range": "< 100",
+      "flag_on_report": "H"
+    },
+    {
+      "test_name": "TSH",
+      "value": "7.9",
+      "unit": "uIU/mL",
+      "ref_range": "0.4 - 4.0",
+      "flag_on_report": "H"
+    },
+    {
+      "test_name": "Free T4",
+      "value": "0.9",
+      "unit": "ng/dL",
+      "ref_range": "0.8 - 1.8",
+      "flag_on_report": null
+    }
+  ]
+}

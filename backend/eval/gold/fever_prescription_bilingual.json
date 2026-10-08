@@ -1,0 +1,45 @@
+{
+  "category": "bilingual",
+  "sex": "male",
+  "doc_type": "prescription",
+  "doc_date": "2026-08-29",
+  "patient_name": "Aman Gupta",
+  "facility": "Jeevan Clinic, Indore",
+  "practitioner": "Dr. N. Joshi",
+  "diagnoses": [
+    {
+      "name": "Acute Pharyngitis"
+    }
+  ],
+  "medications": [
+    {
+      "name": "Dolo 650",
+      "strength": "650 mg",
+      "dose_pattern": "1-1-1",
+      "duration": "3 days",
+      "timing": "खाने के बाद"
+    },
+    {
+      "name": "Azithral 500",
+      "strength": "500 mg",
+      "dose_pattern": "1-0-0",
+      "duration": "3 days",
+      "timing": "खाने के बाद"
+    },
+    {
+      "name": "Pan 40",
+      "strength": "40 mg",
+      "dose_pattern": "1-0-0",
+      "duration": "5 days",
+      "timing": "खाली पेट"
+    },
+    {
+      "name": "Cetzine",
+      "strength": "10 mg",
+      "dose_pattern": "0-0-1",
+      "duration": "5 days",
+      "timing": "रात को"
+    }
+  ],
+  "follow_up": "3 दिन बाद दिखाएँ / Review after 3 days"
+}

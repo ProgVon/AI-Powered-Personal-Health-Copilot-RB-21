@@ -6,11 +6,6 @@ psycopg[binary]
 pydantic>=2
 pydantic-settings
 langchain
-langchain-anthropic
 langchain-google-genai
-langchain-openai
 pymupdf
 pillow
-fhir.resources
-pytest
-httpx

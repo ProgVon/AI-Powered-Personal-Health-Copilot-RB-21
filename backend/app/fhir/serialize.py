@@ -1,8 +1,6 @@
 """DB rows -> FHIR R4 Bundle. Thin by design: tables are already FHIR-shaped."""
 from datetime import date, datetime, timezone
 
-from sqlalchemy.orm import Session
-
 from ..models import Profile
 
 SNOMED = "http://snomed.info/sct"
@@ -66,8 +64,7 @@ def _condition(c, pid: str) -> dict:
     return {"resourceType": "Condition", "id": f"cond-{c.id}", "subject": _ref("Patient", pid),
             "clinicalStatus": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
                                            "code": "active"}]},
-            "code": {"text": c.name, "coding": [{"system": "http://hl7.org/fhir/sid/icd-10", "code": c.icd10_code}]
-                     if c.icd10_code else None},
+            "code": {"text": c.name},
             "recordedDate": _iso(c.recorded_at)}
 
 
@@ -79,7 +76,7 @@ def _allergy(a, pid: str) -> dict:
             "reaction": [{"manifestation": [{"text": a.reaction}]}] if a.reaction else None}
 
 
-def to_bundle(p: Profile, db: Session) -> dict:
+def to_bundle(p: Profile) -> dict:
     pid = f"patient-{p.id}"
     res = [{"resourceType": "Patient", "id": pid, "name": [{"text": p.name}],
             "gender": p.sex if p.sex in GENDER else "unknown", "birthDate": _iso(p.dob),

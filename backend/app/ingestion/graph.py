@@ -53,9 +53,6 @@ def persist(state):
     return {}
 
 
-STEPS = [prepare, extract, normalize, persist, summarize]  # each takes the state dict and returns new keys
-
-
 def _extract_retrying(state):
     try:  # bad JSON and flaky calls get one retry; client-level retries cover the rest
         return extract(state)
@@ -63,12 +60,15 @@ def _extract_retrying(state):
         return extract(state)
 
 
+STEPS = [prepare, _extract_retrying, normalize, persist, summarize]  # each takes the state dict and returns new keys
+
+
 def run_ingest(document_id: int, profile_id: int):
     """Background-task entry point. Any failure marks the document failed instead of leaving it 'processing'."""
     try:
         state = {"document_id": document_id, "profile_id": profile_id}
         for fn in STEPS:
-            state |= (_extract_retrying if fn is extract else fn)(state)
+            state |= fn(state)
     except Exception as e:
         log.exception("ingestion failed")
         with SessionLocal() as db:

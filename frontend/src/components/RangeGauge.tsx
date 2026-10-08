@@ -26,7 +26,7 @@ export default function RangeGauge({ value, low, high, unit, flag, compact = fal
         <div className="absolute inset-y-0 rounded-full border border-ok/40 bg-ok/25"
           style={{ left: pct(bandLo), width: `calc(${pct(bandHi)} - ${pct(bandLo)})` }} />
         <div className="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-surface shadow-md transition-all duration-700"
-          style={{ left: pct(value), background: `var(--${f.tone === "crit" ? "crit" : f.tone})` }} />
+          style={{ left: pct(value), background: `var(--${f.tone})` }} />
         {low != null && <span className="absolute top-4 -translate-x-1/2 text-[11px] tabular-nums text-muted" style={{ left: pct(low) }}>{fmt(low)}</span>}
         {high != null && <span className="absolute top-4 -translate-x-1/2 text-[11px] tabular-nums text-muted" style={{ left: pct(high) }}>{fmt(high)}</span>}
       </div>
