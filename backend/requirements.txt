@@ -6,7 +6,6 @@ psycopg[binary]
 pydantic>=2
 pydantic-settings
 langchain
-langgraph
 langchain-anthropic
 langchain-google-genai
 langchain-openai

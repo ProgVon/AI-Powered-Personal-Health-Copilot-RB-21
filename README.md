@@ -14,7 +14,6 @@ exportable as **FHIR** and ready for India's **ABHA / ABDM** ecosystem.
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=fff)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=fff)
 ![LangChain](https://img.shields.io/badge/LangChain-1.x-1C3C3C?logo=langchain)
-![LangGraph](https://img.shields.io/badge/LangGraph-agent-1C3C3C)
 ![FHIR](https://img.shields.io/badge/HL7_FHIR-R4-E44D26)
 
 </div>
@@ -71,7 +70,7 @@ flowchart LR
 
     subgraph Backend["FastAPI"]
         R["REST routers<br/>documents · profile · abha"]
-        G["🧠 LangGraph<br/>ingestion agent"]
+        G["🧠 Ingestion<br/>pipeline"]
         RU["📏 Rules engine<br/>labs · formulary · dosage · safety"]
         F["FHIR R4<br/>serialize / import"]
         R -->|background task| G
@@ -94,15 +93,15 @@ serves everything and no CORS setup is needed.
 
 ## ⚙️ How it works
 
-### The ingestion agent (LangGraph)
+### The ingestion pipeline
 
-Every upload runs through a small LangGraph state machine in a background task:
+Every upload runs through five plain Python steps in a background task:
 
 ```mermaid
 flowchart TD
     S([📤 Upload]) --> A["<b>prepare</b><br/>PDF text layer · scans → JPEG pages"]
     A --> B["<b>extract</b><br/>vision LLM → DocumentExtraction schema"]
-    B -->|"bad JSON / flaky call<br/>RetryPolicy: 1 retry"| B
+    B -->|"bad JSON / flaky call<br/>1 retry"| B
     B --> C["<b>normalize</b><br/>pure Python: units · ranges · flags<br/>brand → salt · 1-0-1 → per day"]
     C --> D["<b>persist</b><br/>rows saved · status = summarizing<br/>✅ data visible now"]
     D --> E["<b>summarize</b><br/>plain-language summary · safety filter<br/>pre-translate to user's language"]
@@ -118,7 +117,7 @@ sequenceDiagram
     actor U as User
     participant W as Next.js
     participant API as FastAPI
-    participant AG as LangGraph agent
+    participant AG as Ingestion pipeline
     participant LLM as LLM
 
     U->>W: Drop a photo / PDF
@@ -214,7 +213,6 @@ MedicationRequest, Condition, AllergyIntolerance), so export and import are thin
 | **Frontend** | Next.js 16 (App Router), React 19, TypeScript | Routing, production server and the `/api` proxy |
 | | Tailwind CSS 4, i18next | Design tokens with dark mode; English / Hindi / Telugu |
 | **API** | FastAPI, Pydantic v2 | Typed REST endpoints and validation |
-| **AI agent** | LangGraph | Ingestion state machine with a built-in retry policy |
 | | LangChain (`init_chat_model`, structured output) | One code path for Gemini, Claude or OpenAI |
 | **Documents** | PyMuPDF, Pillow | PDF text layers, page rendering, photo orientation and resizing |
 | **Rules** | difflib (stdlib) + curated CSV catalogues | Fuzzy lab and brand matching, ranges, units |
@@ -282,7 +280,7 @@ python -m eval.run_eval     # field-level accuracy on a labelled gold set in eva
 ```
 ├── backend/
 │   ├── app/
-│   │   ├── ingestion/     # LangGraph agent: prepare → extract → normalize → persist → summarize
+│   │   ├── ingestion/     # ingestion pipeline: prepare → extract → normalize → persist → summarize
 │   │   ├── rules/         # labs, formulary, dosage, safety text — the deterministic layer
 │   │   ├── fhir/          # FHIR R4 serialize + import
 │   │   ├── routers/       # documents, profile, abha

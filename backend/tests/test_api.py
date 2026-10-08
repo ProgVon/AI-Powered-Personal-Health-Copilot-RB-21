@@ -1,5 +1,6 @@
-"""End-to-end through the real LangGraph agent with the LLM stubbed."""
+"""End-to-end through the real ingestion pipeline with the LLM stubbed."""
 import io
+import uuid
 
 from fastapi.testclient import TestClient
 from fhir.resources.R4B.bundle import Bundle
@@ -38,10 +39,14 @@ def _png():
     return buf.getvalue()
 
 
+def _visit():
+    return {"X-Visit": str(uuid.uuid4())}
+
+
 def test_full_flow(monkeypatch):
     monkeypatch.setattr(graph, "structured", lambda *a: FakeLLM(EXTRACTION))
     monkeypatch.setattr(summarize, "structured", lambda *a: FakeLLM(SUMMARY))
-    with TestClient(app) as c:
+    with TestClient(app, headers=_visit()) as c:
         assert c.post("/documents", files={"file": ("a.txt", b"x", "text/plain")}).status_code == 415
 
         r = c.post("/documents", files={"file": ("a.png", _png(), "image/png")})
@@ -86,7 +91,7 @@ def test_extraction_failure_marks_failed(monkeypatch):
             calls.append(1)
             raise RuntimeError("api down")
     monkeypatch.setattr(graph, "structured", lambda *a: Boom(None))
-    with TestClient(app) as c:
+    with TestClient(app, headers=_visit()) as c:
         r = c.post("/documents", files={"file": ("a.png", _png(), "image/png")})
         d = c.get(f"/documents/{r.json()['id']}").json()
         assert d["status"] == "failed" and "api down" in d["extraction"]["_error"]
@@ -106,7 +111,7 @@ def test_digital_pdf_skips_images_and_pretranslates(monkeypatch):
             return self.out
     monkeypatch.setattr(graph, "structured", lambda *a: Spy(EXTRACTION))
     monkeypatch.setattr(summarize, "structured", lambda *a: FakeLLM(SUMMARY))
-    with TestClient(app) as c:
+    with TestClient(app, headers=_visit()) as c:
         c.put("/profile", json={"preferred_language": "hi"})
         r = c.post("/documents", files={"file": ("a.pdf", pdf.tobytes(), "application/pdf")})
         d = c.get(f"/documents/{r.json()['id']}").json()
@@ -114,3 +119,10 @@ def test_digital_pdf_skips_images_and_pretranslates(monkeypatch):
         doc = summarize.SessionLocal().get(summarize.Document, d["id"])
         assert "hi" in doc.summary_i18n  # ready before the reader asks
         c.delete("/profile")
+
+
+def test_visitors_are_isolated():
+    with TestClient(app, headers=_visit()) as a, TestClient(app, headers=_visit()) as b:  # separate tabs
+        a.put("/profile", json={"name": "Alice"})
+        assert a.get("/profile").json()["name"] == "Alice"
+        assert b.get("/profile").json()["name"] == "Guest"

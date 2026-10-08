@@ -1,7 +1,17 @@
 const BASE = "/api";  // proxied to the backend by next.config.ts
 
+// Per-tab visitor id: survives refresh, gone when the tab closes, so each tab sees only its own uploads.
+function visitId() {
+  try {
+    let v = sessionStorage.getItem("visit");
+    if (!v) sessionStorage.setItem("visit", v = crypto.randomUUID());
+    return v;
+  } catch { return (visitId as { v?: string }).v ??= crypto.randomUUID(); }  // storage blocked: one id per page load
+}
+
 async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
+  headers.set("X-Visit", visitId());
   if (init.body && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
   const r = await fetch(BASE + path, { ...init, headers });
   if (!r.ok) {
@@ -40,7 +50,7 @@ export const api = {
   docs: () => req<Doc[]>("/documents"),
   doc: (id: number) => req<Doc>(`/documents/${id}`),
   summary: (id: number, lang: string) => req<Summary>(`/documents/${id}/summary?lang=${lang}`),
-  file: async (id: number) => { const b = await (await fetch(`${BASE}/documents/${id}/file`)).blob(); return { url: URL.createObjectURL(b), type: b.type }; },
+  file: async (id: number) => { const b = await (await fetch(`${BASE}/documents/${id}/file`, { headers: { "X-Visit": visitId() } })).blob(); return { url: URL.createObjectURL(b), type: b.type }; },
   timeline: (types: string[]) => req<TimelineItem[]>(`/profile/timeline?types=${types.join(",")}`),
   abhaLink: (abha: string) => post<{ demo_otp: string }>("/abha/link", { abha }),
   abhaVerify: (otp: string) => post("/abha/verify", { otp }),

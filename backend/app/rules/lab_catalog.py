@@ -1,8 +1,9 @@
 import csv
 import re
-from difflib import get_close_matches
 from functools import lru_cache
 from pathlib import Path
+
+from .lookup import lookup
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 NUM = ["ref_low_m", "ref_high_m", "ref_low_f", "ref_high_f", "critical_low", "critical_high",
@@ -34,12 +35,7 @@ def _alias_index() -> dict[str, dict]:
 
 def find(name: str) -> dict | None:
     """Exact alias match, then fuzzy (>= 88)."""
-    n = re.sub(r"\s+", " ", name.lower()).strip()
-    idx = _alias_index()
-    if n in idx:
-        return idx[n]
-    hit = get_close_matches(n, idx, n=1, cutoff=0.88)
-    return idx[hit[0]] if hit else None
+    return lookup(_alias_index(), re.sub(r"\s+", " ", name.lower()).strip(), 0.88)
 
 
 def unit_factor(row: dict, unit: str | None) -> float | None:

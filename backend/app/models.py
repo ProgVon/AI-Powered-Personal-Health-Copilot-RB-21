@@ -13,6 +13,15 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     preferred_language: Mapped[str] = mapped_column(String, default="en")
     profile: Mapped["Profile"] = relationship(back_populates="user", cascade=CASCADE, uselist=False)
+    visit: Mapped["Visit"] = relationship(back_populates="user", cascade=CASCADE, uselist=False)
+
+
+class Visit(Base):  # anonymous browser session -> its own user; own table so existing DBs need no migration
+    __tablename__ = "visits"
+    token: Mapped[str] = mapped_column(String, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    user: Mapped[User] = relationship(back_populates="visit")
 
 
 class Profile(Base):  # FHIR Patient

@@ -1,8 +1,9 @@
 import csv
 import re
-from difflib import get_close_matches
 from functools import lru_cache
 from pathlib import Path
+
+from .lookup import lookup
 
 FORMS = r"\b(tab|tablet|tablets|cap|capsule|capsules|syp|syrup|inj|injection)\b\.?"
 
@@ -20,8 +21,4 @@ def formulary() -> dict[str, dict]:
 
 def match(name: str) -> dict | None:
     """Exact then fuzzy (>= 85) brand lookup. Returns the formulary row or None."""
-    idx, k = formulary(), _key(name)
-    if k in idx:
-        return idx[k]
-    hit = get_close_matches(k, idx, n=1, cutoff=0.85)
-    return idx[hit[0]] if hit else None
+    return lookup(formulary(), _key(name), 0.85)

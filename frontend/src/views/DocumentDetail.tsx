@@ -94,14 +94,17 @@ export default function DocumentDetail() {
         {busy && <span className="flex items-center gap-2 text-sm text-muted"><Spinner />{t("translating")}</span>}
       </div>
 
-      {tab === "summary" && (summary
-        ? <SummaryCard s={summary} observations={obs} />
-        : doc.status === "summarizing"
-          ? <div className="card flex items-center gap-3 p-6 text-muted"><Spinner />{t("processing.s3")}</div>
-          : <EmptyState icon="file" title={t("noSummary")} />)}
+      {/* summary and data both render; the inactive one is hidden on screen but still printed */}
+      <div className={tab === "summary" ? "" : "hidden print:block"}>
+        {summary
+          ? <SummaryCard s={summary} observations={obs} />
+          : doc.status === "summarizing"
+            ? <div className="card flex items-center gap-3 p-6 text-muted"><Spinner />{t("processing.s3")}</div>
+            : <EmptyState icon="file" title={t("noSummary")} />}
+      </div>
 
-      {tab === "data" && (
-        <div className="space-y-8">
+      <div className={tab === "data" ? "" : "hidden print:block"}>
+        <div className="space-y-8 print:mt-8">
           {!hasData && <EmptyState icon="file" title={t("noData")} />}
           {obs.length > 0 && (
             <section>
@@ -140,7 +143,8 @@ export default function DocumentDetail() {
               {doc.conditions?.map((c, i) => <Badge key={i} tone="dx" icon="steth">{c.name}</Badge>)}
               {doc.allergies?.map((a, i) => <Badge key={i} tone="high" icon="alert">{a.substance}</Badge>)}
             </section>) : null}
-        </div>)}
+        </div>
+      </div>
 
       {tab === "original" && file && (
         <div className="card overflow-hidden">

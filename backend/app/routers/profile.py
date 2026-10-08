@@ -5,11 +5,10 @@ from pydantic import BaseModel
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from ..auth import current_profile
+from ..auth import current_profile, delete_profile_data
 from ..db import get_db
 from ..fhir.serialize import to_bundle
 from ..models import Allergy, Condition, Document, Medication, Observation, Profile
-from .documents import delete_profile_data
 
 router = APIRouter(tags=["profile"])
 ABNORMAL = ("L", "H", "LL", "HH")

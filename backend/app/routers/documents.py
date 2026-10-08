@@ -1,4 +1,3 @@
-import shutil
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile
@@ -94,10 +93,3 @@ def get_summary(doc_id: int, lang: str = "en", p: Profile = Depends(current_prof
         d.summary_i18n = cached
         db.commit()
     return cached[lang]
-
-
-def delete_profile_data(db: Session, p: Profile):
-    for d in p.documents:
-        shutil.rmtree(Path(settings.STORAGE_DIR) / str(d.id), ignore_errors=True)
-    db.delete(p.user)  # cascades to profile, documents and every clinical row
-    db.commit()

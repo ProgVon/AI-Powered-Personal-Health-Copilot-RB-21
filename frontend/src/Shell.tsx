@@ -69,7 +69,7 @@ function Layout({ children }: { children: ReactNode }) {
     `flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition ${isActive ? "bg-brand-soft text-brand-strong" : "text-muted hover:bg-surface-2 hover:text-ink"}`;
   const abha = profile?.abha;
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[17rem_1fr]">
+    <div className="app-shell min-h-screen md:grid md:grid-cols-[17rem_1fr]">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-surface focus:p-3">{t("skip")}</a>
 
       <aside className="no-print sticky top-0 hidden h-screen flex-col gap-6 border-r border-line bg-surface/70 p-5 backdrop-blur md:flex">

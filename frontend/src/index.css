@@ -72,5 +72,7 @@ body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); 
 @media print {
   .no-print { display: none !important; }
   body { background: #fff; color: #000; }
+  .app-shell { display: block !important; }  /* drop the hidden sidebar's grid column */
+  *, *::before, *::after { animation: none !important; }  /* fade-in cards would print blank mid-animation */
   .card { box-shadow: none; break-inside: avoid; }
 }

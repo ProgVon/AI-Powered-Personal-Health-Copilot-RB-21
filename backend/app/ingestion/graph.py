@@ -2,11 +2,8 @@ import base64
 import logging
 import mimetypes
 import time
-from typing import TypedDict
 
 from langchain_core.messages import HumanMessage
-from langgraph.graph import END, START, StateGraph
-from langgraph.types import RetryPolicy
 
 from ..config import settings
 from ..db import SessionLocal
@@ -19,16 +16,6 @@ from .schemas import DocumentExtraction
 from .summarize import summarize
 
 log = logging.getLogger(__name__)
-
-
-class IngestState(TypedDict, total=False):
-    document_id: int
-    profile_id: int
-    page_paths: list[str]
-    text_layer: str
-    extraction: dict
-    record: dict
-    warnings: list[str]
 
 
 def _image_block(path: str) -> dict:
@@ -66,19 +53,22 @@ def persist(state):
     return {}
 
 
-STEPS = [prepare, extract, normalize, persist, summarize]
-g = StateGraph(IngestState)
-for fn in STEPS:  # bad JSON and flaky calls get one retry; client-level retries cover the rest
-    g.add_node(fn, retry_policy=RetryPolicy(max_attempts=2, retry_on=Exception) if fn is extract else None)
-for a, b in zip([START, *(f.__name__ for f in STEPS)], [*(f.__name__ for f in STEPS), END]):
-    g.add_edge(a, b)
-ingest_graph = g.compile()
+STEPS = [prepare, extract, normalize, persist, summarize]  # each takes the state dict and returns new keys
+
+
+def _extract_retrying(state):
+    try:  # bad JSON and flaky calls get one retry; client-level retries cover the rest
+        return extract(state)
+    except Exception:
+        return extract(state)
 
 
 def run_ingest(document_id: int, profile_id: int):
     """Background-task entry point. Any failure marks the document failed instead of leaving it 'processing'."""
     try:
-        ingest_graph.invoke({"document_id": document_id, "profile_id": profile_id})
+        state = {"document_id": document_id, "profile_id": profile_id}
+        for fn in STEPS:
+            state |= (_extract_retrying if fn is extract else fn)(state)
     except Exception as e:
         log.exception("ingestion failed")
         with SessionLocal() as db:
