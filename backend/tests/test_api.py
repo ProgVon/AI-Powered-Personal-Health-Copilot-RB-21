@@ -218,3 +218,25 @@ def test_failed_email_keeps_no_account(monkeypatch):
         assert c.post("/auth/signup", json=body).status_code == 502
         monkeypatch.undo()
         assert c.post("/auth/signup", json=body).status_code == 200  # not "already registered"
+
+
+def test_send_mail_uses_brevo_when_keyed(monkeypatch):
+    import json
+    import urllib.request
+    from app.config import settings
+    sent = {}
+
+    class Resp:
+        def close(self):
+            pass
+
+    def fake_urlopen(req, timeout):
+        sent.update(url=req.full_url, key=req.get_header("Api-key"), body=json.loads(req.data))
+        return Resp()
+    monkeypatch.setattr(settings, "BREVO_API_KEY", "xkeysib-test")
+    monkeypatch.setattr(settings, "SMTP_FROM", "Health Copilot <me@gmail.com>")
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    auth.send_mail("ann@x.com", "Hi", "code 123456")
+    assert sent["url"] == "https://api.brevo.com/v3/smtp/email" and sent["key"] == "xkeysib-test"
+    assert sent["body"]["sender"] == {"name": "Health Copilot", "email": "me@gmail.com"}
+    assert sent["body"]["to"] == [{"email": "ann@x.com"}] and sent["body"]["textContent"] == "code 123456"

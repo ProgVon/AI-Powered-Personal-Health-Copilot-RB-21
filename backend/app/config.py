@@ -17,7 +17,8 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587  # 587 = STARTTLS, 465 = SSL
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
-    SMTP_FROM: str = ""  # defaults to SMTP_USER
+    SMTP_FROM: str = ""  # sender, e.g. "Health Copilot <you@gmail.com>"; defaults to SMTP_USER
+    BREVO_API_KEY: str = ""  # set: email goes through Brevo's HTTPS API instead of SMTP (needed on Render's free plan)
 
 
 settings = Settings()

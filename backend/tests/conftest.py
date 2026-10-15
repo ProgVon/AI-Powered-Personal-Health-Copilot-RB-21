@@ -5,6 +5,7 @@ _tmp = tempfile.mkdtemp()  # tests never touch Postgres; file DB so background-t
 os.environ["DATABASE_URL"] = f"sqlite:///{_tmp}/test.db"
 os.environ["STORAGE_DIR"] = f"{_tmp}/storage"
 os.environ["SMTP_HOST"] = ""  # never email real people from tests, whatever .env says
+os.environ["BREVO_API_KEY"] = ""
 os.environ["JWT_SECRET"] = "test-secret-" + "x" * 32
 
 

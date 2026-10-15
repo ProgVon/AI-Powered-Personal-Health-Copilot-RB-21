@@ -273,7 +273,8 @@ npm run dev                               # http://localhost:5173
 | `SMTP_HOST` | `smtp.gmail.com` | Sends login codes. Empty: codes are printed in the backend log (local dev) |
 | `SMTP_PORT` | `587` | 587 = STARTTLS, 465 = SSL |
 | `SMTP_USER` / `SMTP_PASSWORD` | `you@gmail.com` / app password | For Gmail, create an app password (needs 2-Step Verification) |
-| `SMTP_FROM` | `Health Copilot <you@gmail.com>` | Optional sender; defaults to `SMTP_USER` |
+| `SMTP_FROM` | `Health Copilot <you@gmail.com>` | Sender name and address; defaults to `SMTP_USER` |
+| `BREVO_API_KEY` | `xkeysib-…` | Sends email over HTTPS via Brevo instead of SMTP. Needed on hosts that block SMTP (Render free plan); verify `SMTP_FROM` as a sender in Brevo |
 
 Switching provider is just `anthropic:<model>` or `openai:<model>` plus that provider's key,
 `pip install langchain-anthropic` or `pip install langchain-openai` (only Gemini's package ships in `requirements.txt`).
