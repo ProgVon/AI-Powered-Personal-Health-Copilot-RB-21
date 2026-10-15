@@ -140,6 +140,8 @@ def normalize(state):
 
     with SessionLocal() as db:
         p = db.get(Profile, state["profile_id"])
-        name, dob, sex = p.name, p.dob, p.sex
+        # the default name is the username, which never matches a real name on a report: skip that check then
+        name = "" if p.user.account and p.name == p.user.account.username else p.name
+        dob, sex = p.dob, p.sex
     record, warnings = normalize_record(state["extraction"], name, dob, sex)
     return {"record": record, "warnings": warnings}

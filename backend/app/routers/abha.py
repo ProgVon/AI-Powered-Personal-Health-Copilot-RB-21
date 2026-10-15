@@ -47,7 +47,7 @@ def verify(body: Verify, p: Profile = Depends(current_profile), db: Session = De
     if not (p.abha_number or p.abha_address):
         raise HTTPException(409, "Start by linking an ABHA number or address")
     if body.otp != DEMO_OTP:
-        raise HTTPException(401, "Incorrect OTP")
+        raise HTTPException(400, "Incorrect OTP")  # not 401: the app reads 401 as "logged out"
     p.abha_linked_at = datetime.now()
     db.commit()
     return {"status": "linked"}

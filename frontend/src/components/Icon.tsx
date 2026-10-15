@@ -27,6 +27,7 @@ const P = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   lightbulb: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.7.6 1 1.3 1 2.1h5c0-.8.3-1.5 1-2.1A6 6 0 0 0 12 3z"/>',
   message: '<path d="M4 5h16v11H9l-5 4z"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>',
 } as const;
 
 export type IconName = keyof typeof P;

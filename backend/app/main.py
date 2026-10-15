@@ -7,7 +7,7 @@ from sqlalchemy import update
 
 from .db import SessionLocal, init_db
 from .models import Document
-from .routers import abha, documents, profile
+from .routers import abha, auth, documents, profile
 
 
 logging.basicConfig(level=logging.INFO)  # show ingestion timings next to uvicorn's log
@@ -25,5 +25,5 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Health Copilot", lifespan=lifespan)
-for r in (documents.router, profile.router, abha.router):
+for r in (auth.router, documents.router, profile.router, abha.router):
     app.include_router(r)

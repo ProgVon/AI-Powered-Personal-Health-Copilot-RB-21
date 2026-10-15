@@ -1,19 +1,25 @@
 const BASE = "/api";  // proxied to the backend by next.config.ts
 
-// Per-tab visitor id: survives refresh, gone when the tab closes, so each tab sees only its own uploads.
-function visitId() {
-  try {
-    let v = sessionStorage.getItem("visit");
-    if (!v) sessionStorage.setItem("visit", v = crypto.randomUUID());
-    return v;
-  } catch { return (visitId as { v?: string }).v ??= crypto.randomUUID(); }  // storage blocked: one id per page load
+// JWT from /auth/verify, kept across tabs and restarts until logout or a 401.
+let memToken: string | null = null;  // fallback when storage is blocked
+export const getToken = () => { try { return localStorage.getItem("token"); } catch { return memToken; } };
+export function setToken(t: string | null) {
+  memToken = t;
+  try { if (t) localStorage.setItem("token", t); else localStorage.removeItem("token"); } catch { /* private mode */ }
 }
+const authHeader = (): Record<string, string> => { const t = getToken(); return t ? { Authorization: `Bearer ${t}` } : {}; };
 
 async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  headers.set("X-Visit", visitId());
+  const t = getToken();
+  if (t) headers.set("Authorization", `Bearer ${t}`);
   if (init.body && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
   const r = await fetch(BASE + path, { ...init, headers });
+  if (r.status === 401 && getToken()) {  // expired, password reset elsewhere, or account deleted: back to login
+    setToken(null);
+    try { sessionStorage.setItem("loggedOut", "1"); } catch { /* private mode */ }
+    location.reload();
+  }
   if (!r.ok) {
     const detail = (await r.json().catch(() => ({}))).detail;  // 422s carry a list of field errors
     throw new Error((Array.isArray(detail) ? detail[0]?.msg : detail) ?? r.statusText);
@@ -50,10 +56,21 @@ export const api = {
   docs: () => req<Doc[]>("/documents"),
   doc: (id: number) => req<Doc>(`/documents/${id}`),
   summary: (id: number, lang: string) => req<Summary>(`/documents/${id}/summary?lang=${lang}`),
-  file: async (id: number) => { const b = await (await fetch(`${BASE}/documents/${id}/file`, { headers: { "X-Visit": visitId() } })).blob(); return { url: URL.createObjectURL(b), type: b.type }; },
+  file: async (id: number) => {
+    const r = await fetch(`${BASE}/documents/${id}/file`, { headers: authHeader() });
+    if (!r.ok) throw new Error("Original file not available");  // e.g. wiped with the server's disk
+    const b = await r.blob();
+    return { url: URL.createObjectURL(b), type: b.type };
+  },
   timeline: (types: string[]) => req<TimelineItem[]>(`/profile/timeline?types=${types.join(",")}`),
   abhaLink: (abha: string) => post<{ demo_otp: string }>("/abha/link", { abha }),
   abhaVerify: (otp: string) => post("/abha/verify", { otp }),
   abhaImport: () => post<{ imported_document_ids: number[] }>("/abha/import"),
   fhir: () => req<unknown>("/profile/fhir"),
+  signup: (username: string, email: string, password: string) => post<{ email: string }>("/auth/signup", { username, email, password }),
+  login: (login: string, password: string) => post<{ email: string }>("/auth/login", { login, password }),
+  verifyOtp: (email: string, otp: string) => post<{ token: string }>("/auth/verify", { email, otp }),
+  forgot: (email: string) => post<{ email: string }>("/auth/forgot", { email }),
+  checkReset: (email: string, otp: string) => post("/auth/reset/check", { email, otp }),
+  reset: (email: string, otp: string, password: string) => post("/auth/reset", { email, otp, password }),
 };

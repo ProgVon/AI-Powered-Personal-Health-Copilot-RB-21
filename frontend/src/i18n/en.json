@@ -37,5 +37,14 @@
   "mockNote": "Demo only: real ABDM integration needs sandbox registration.",
   "disclaimer": "This app helps you understand your records. It does not provide diagnosis or treatment. Always consult a qualified doctor.",
   "language": "Language", "theme": "Toggle dark mode", "serverDown": "Can't reach the server", "serverDownSub": "Make sure the backend is running on port 8000.",
-  "abdmBadge": "ABDM"
+  "abdmBadge": "ABDM",
+  "auth": {
+    "mode": "Sign up or log in", "signup": "Sign up", "login": "Log in", "logout": "Log out",
+    "signupTitle": "Create your account", "loginTitle": "Welcome back", "checkEmail": "Check your email",
+    "username": "Username", "usernameOrEmail": "Username or email", "fillBoth": "Enter your username or email and your password", "usernameHint": "3–30 characters: letters, numbers, _ . or -", "emailHint": "Enter a valid email address", "passwordHint": "At least 8 characters", "email": "Email", "password": "Password",
+    "otpSent": "We sent a 6-digit code to {{email}}", "back": "Back",
+    "forgot": "Forgot password?", "forgotTitle": "Reset your password", "forgotSub": "Enter the email linked to your account and we'll send you a code.",
+    "resetSent": "If an account uses {{email}}, we sent it a 6-digit code", "backToLogin": "Back to log in",
+    "newPasswordTitle": "Choose a new password", "newPassword": "New password", "savePassword": "Save and log in", "resetDone": "Password updated. Log in with your new password.", "loggedOut": "You were logged out because your password was changed or your session expired. Please log in again."
+  }
 }

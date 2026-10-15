@@ -8,7 +8,7 @@ DASH = re.compile(r"[\d½¼¾.]+(?:\s*[-–]\s*[\d½¼¾.]+){1,3}")
 SLOTS_BY_LEN = {2: ["morning", "night"], 3: ["morning", "afternoon", "night"],
                 4: ["morning", "afternoon", "evening", "night"]}
 UNIT_DAYS = [("day", 1), ("din", 1), ("दिन", 1), ("week", 7), ("wk", 7), ("हफ्त", 7),
-             ("month", 30), ("mth", 30), ("महीन", 30)]
+             ("month", 30), ("mth", 30), ("महीन", 30), ("d", 1), ("w", 7)]  # short forms last: "5d", "x5d", "1w"
 
 
 def _has(text: str, terms: list[str]) -> bool:

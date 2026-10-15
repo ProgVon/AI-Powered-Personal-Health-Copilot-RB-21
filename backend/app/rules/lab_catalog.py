@@ -47,8 +47,13 @@ def unit_factor(row: dict, unit: str | None) -> float | None:
 
 
 def catalog_range(row: dict, sex: str | None) -> tuple[float | None, float | None]:
-    s = "f" if sex == "female" else "m"
-    return row[f"ref_low_{s}"], row[f"ref_high_{s}"]
+    if sex in ("male", "female"):
+        s = sex[0]
+        return row[f"ref_low_{s}"], row[f"ref_high_{s}"]
+    # sex unknown: the widest of both ranges, so nobody is flagged against the other sex's normal values
+    lows = [x for x in (row["ref_low_m"], row["ref_low_f"]) if x is not None]
+    highs = [x for x in (row["ref_high_m"], row["ref_high_f"]) if x is not None]
+    return min(lows, default=None), max(highs, default=None)
 
 
 def interpret(v: float, lo: float | None, hi: float | None,

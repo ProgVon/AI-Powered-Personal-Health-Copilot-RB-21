@@ -42,7 +42,9 @@ export default function DocumentDetail() {
 
   useEffect(() => {  // poll until the summary lands; extracted data shows as soon as status is "summarizing"
     let timer: number;
-    const load = () => api.doc(id).then((d) => { setDoc(d); if (d.status === "processing" || d.status === "summarizing") timer = window.setTimeout(load, 1000); });
+    const load = () => api.doc(id)
+      .then((d) => { setDoc(d); if (d.status === "processing" || d.status === "summarizing") timer = window.setTimeout(load, 1000); })
+      .catch(() => { timer = window.setTimeout(load, 3000); });  // a hiccup (e.g. server waking up) must not stop polling
     load();
     return () => clearTimeout(timer);
   }, [id]);

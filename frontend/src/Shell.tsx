@@ -3,9 +3,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api, Profile } from "./api";
+import { api, getToken, Profile, setToken } from "./api";
 import { ToastProvider } from "./components/Toast";
 import Icon, { IconName } from "./components/Icon";
+import Login from "./components/Login";
 import { EmptyState, Segmented } from "./components/ui";
 import { LANGS, Lang } from "./i18n";
 
@@ -50,6 +51,10 @@ function Controls() {
       <button onClick={toggle} aria-label={t("theme")} aria-pressed={dark} className="btn btn-ghost !min-h-9 !w-9 !px-0">
         <Icon name={dark ? "sun" : "moon"} className="h-4 w-4" />
       </button>
+      {getToken() && (
+        <button onClick={() => { setToken(null); location.reload(); }} aria-label={t("auth.logout")} title={t("auth.logout")} className="btn btn-ghost !min-h-9 !w-9 !px-0">
+          <Icon name="logout" className="h-4 w-4" />
+        </button>)}
     </div>
   );
 }
@@ -60,6 +65,10 @@ function Layout({ children }: { children: ReactNode }) {
   const [down, setDown] = useState(false);
   const reload = useCallback(() => { api.profile().then((p) => { setProfile(p); setDown(false); }).catch(() => setDown(true)); }, []);
   useEffect(reload, [reload]);
+  useEffect(() => {  // re-check the session when the tab comes back, so a password reset elsewhere logs it out
+    window.addEventListener("focus", reload);
+    return () => window.removeEventListener("focus", reload);
+  }, [reload]);
   const path = usePathname();
   const active = (n: (typeof NAV)[number]) => (n.to === "/" ? path === n.to : path.startsWith(n.to));
   const link = (on: boolean) =>
@@ -106,5 +115,14 @@ function Layout({ children }: { children: ReactNode }) {
 }
 
 export default function Shell({ children }: { children: ReactNode }) {
-  return <ToastProvider><Layout>{children}</Layout></ToastProvider>;
+  const [authed, setAuthed] = useState(() => !!getToken());
+  return (
+    <ToastProvider>
+      {authed ? <Layout>{children}</Layout> : (
+        <div className="app-shell grid min-h-screen place-items-center gap-6 px-4 py-10">
+          <div className="flex w-full max-w-md items-center justify-between"><Logo /><Controls /></div>
+          <Login onDone={() => setAuthed(true)} />
+        </div>)}
+    </ToastProvider>
+  );
 }

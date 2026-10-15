@@ -250,6 +250,7 @@ cd backend
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env        # set VISION_MODEL, TEXT_MODEL (provider:model) and LLM_API_KEY
+python3 -c "import secrets; print(secrets.token_urlsafe(48))"   # paste as JWT_SECRET in .env (required)
 uvicorn app.main:app --reload            # http://localhost:8000  (API docs at /docs)
 
 # Frontend (second terminal)
@@ -268,6 +269,11 @@ npm run dev                               # http://localhost:5173
 | `DATABASE_URL` | `sqlite:///dev.db` | Local default; Supabase in production (`postgresql+psycopg://…`) |
 | `STORAGE_DIR` | `storage` | Where uploads are kept |
 | `LLM_KWARGS` | `{"thinking_budget": 0}` | Optional provider-specific extras (e.g. faster Gemini) |
+| `JWT_SECRET` | 64 random characters | **Required** (min 32). Signs login tokens; changing it logs everyone out |
+| `SMTP_HOST` | `smtp.gmail.com` | Sends login codes. Empty: codes are printed in the backend log (local dev) |
+| `SMTP_PORT` | `587` | 587 = STARTTLS, 465 = SSL |
+| `SMTP_USER` / `SMTP_PASSWORD` | `you@gmail.com` / app password | For Gmail, create an app password (needs 2-Step Verification) |
+| `SMTP_FROM` | `Health Copilot <you@gmail.com>` | Optional sender; defaults to `SMTP_USER` |
 
 Switching provider is just `anthropic:<model>` or `openai:<model>` plus that provider's key,
 `pip install langchain-anthropic` or `pip install langchain-openai` (only Gemini's package ships in `requirements.txt`).
@@ -279,7 +285,7 @@ Switching provider is just `anthropic:<model>` or `openai:<model>` plus that pro
 | Part | Where | Set |
 |---|---|---|
 | Database | **Supabase** (Postgres) | `DATABASE_URL=postgresql+psycopg://postgres:<password>@db.<project>.supabase.co:5432/postgres` on the API |
-| API | FastAPI host with a persistent disk for uploads | `LLM_API_KEY`, `VISION_MODEL`, `TEXT_MODEL`, `STORAGE_DIR`; start with `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| API | FastAPI host with a persistent disk for uploads | `LLM_API_KEY`, `VISION_MODEL`, `TEXT_MODEL`, `STORAGE_DIR`, `JWT_SECRET`, `SMTP_*`; start with `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 | Frontend | **Vercel** (root directory `frontend`) | `BACKEND_URL=https://<your-api>` — read at build time, so redeploy after changing it |
 
 ---

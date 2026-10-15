@@ -22,7 +22,7 @@ def test_dose_as_needed():
 
 
 @pytest.mark.parametrize("t,d", [("5 days", 5), ("2 weeks", 14), ("1 month", 30), ("continue", None),
-                                 ("३ दिन", 3), ("10 din", 10), (None, None)])
+                                 ("३ दिन", 3), ("10 din", 10), (None, None), ("5d", 5), ("x5d", 5), ("1w", 7)])
 def test_duration(t, d):
     assert dosage.parse_duration_days(t) == d
 
@@ -56,6 +56,7 @@ def test_sex_specific_range():
     lab = {"test_name": "Hemoglobin", "value": "12.5", "unit": "g/dL"}
     assert normalize_lab(lab, "male")["interpretation"] == "L"
     assert normalize_lab(lab, "female")["interpretation"] == "N"
+    assert normalize_lab(lab, None)["interpretation"] == "N"  # sex unknown: no false "Low"
 
 
 def test_implausible_value_not_interpreted():

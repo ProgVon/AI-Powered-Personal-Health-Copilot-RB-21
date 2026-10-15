@@ -5,6 +5,7 @@ sqlalchemy>=2
 psycopg[binary]
 pydantic>=2
 pydantic-settings
+PyJWT
 langchain
 langchain-google-genai
 pymupdf

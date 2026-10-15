@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from fhir.resources.R4B.bundle import Bundle
 from PIL import Image
 
+from app import auth
 from app.ingestion import graph, summarize
 from app.ingestion.schemas import DocumentExtraction, Summary
 from app.main import app
@@ -39,8 +40,64 @@ def _png():
     return buf.getvalue()
 
 
+SENT = {}
+auth.send_otp = lambda email, code: SENT.__setitem__(email, code)  # capture OTPs instead of emailing
+
+
 def _visit():
-    return {"X-Visit": str(uuid.uuid4())}
+    """Sign up a fresh user and return its auth header."""
+    name = "u" + uuid.uuid4().hex[:12]
+    with TestClient(app) as c:
+        c.post("/auth/signup", json={"username": name, "email": f"{name}@x.com", "password": "password1"})
+        token = c.post("/auth/verify", json={"email": f"{name}@x.com", "otp": SENT[f"{name}@x.com"]}).json()["token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_auth_flow():
+    with TestClient(app) as c:
+        assert c.get("/profile").status_code == 401
+        assert c.get("/profile", headers={"Authorization": "Bearer junk"}).status_code == 401
+        body = {"username": "ann_1", "email": "Ann@X.com", "password": "password1"}
+        assert c.post("/auth/signup", json=body).status_code == 200
+        first = SENT["ann@x.com"]
+        assert c.post("/auth/signup", json={**body, "username": "other"}).json() == {"email": "ann@x.com"}  # looks new
+        assert SENT["ann@x.com"] == first  # but no new code: the owner gets an "already registered" note instead
+        assert c.post("/auth/signup", json={**body, "email": "new@x.com"}).status_code == 409  # username taken
+        assert c.post("/auth/signup", json={**body, "password": "short"}).status_code == 422
+        assert c.post("/auth/verify", json={"email": "ann@x.com", "otp": f"{(int(SENT['ann@x.com']) + 1) % 10**6:06d}"}).status_code == 401
+        token = c.post("/auth/verify", json={"email": "ann@x.com", "otp": SENT["ann@x.com"]}).json()["token"]
+        assert c.post("/auth/verify", json={"email": "ann@x.com", "otp": SENT["ann@x.com"]}).status_code == 401  # one use
+        assert c.get("/profile", headers={"Authorization": f"Bearer {token}"}).json()["name"] == "ann_1"
+
+        assert c.post("/auth/login", json={"login": "ann_1", "password": "wrong-pass"}).status_code == 401
+        assert c.post("/auth/login", json={"login": "nobody", "password": "password1"}).status_code == 401
+        assert c.post("/auth/login", json={"login": "ANN@x.com", "password": "password1"}).status_code == 429  # right, but resend too soon
+        assert c.post("/auth/login", json={"login": "ann_1", "password": "password1"}).status_code == 429
+
+
+def test_password_reset(monkeypatch):
+    from datetime import timedelta
+    from app.routers import auth as auth_router
+    monkeypatch.setattr(auth_router, "RESEND_AFTER", timedelta(0))
+    with TestClient(app) as c:
+        c.post("/auth/signup", json={"username": "rita", "email": "rita@x.com", "password": "old-password"})
+        old = {"Authorization": "Bearer " + c.post("/auth/verify", json={"email": "rita@x.com", "otp": SENT["rita@x.com"]}).json()["token"]}
+        assert c.get("/profile", headers=old).status_code == 200
+        assert c.post("/auth/forgot", json={"email": "ghost@x.com"}).json() == {"email": "ghost@x.com"}  # no leak
+        assert "ghost@x.com" not in SENT
+        c.post("/auth/forgot", json={"email": "rita@x.com"})
+        code = SENT["rita@x.com"]
+        wrong = f"{(int(code) + 1) % 10**6:06d}"
+        assert c.post("/auth/reset/check", json={"email": "rita@x.com", "otp": wrong}).status_code == 401
+        assert c.post("/auth/reset", json={"email": "rita@x.com", "otp": wrong, "password": "new-password"}).status_code == 401
+        for _ in range(2):  # 2 wrong guesses above + 2 = 4 used; the right code must still pass twice
+            c.post("/auth/reset/check", json={"email": "rita@x.com", "otp": wrong})
+        assert c.post("/auth/reset/check", json={"email": "rita@x.com", "otp": code}).status_code == 200
+        assert c.post("/auth/reset", json={"email": "rita@x.com", "otp": code, "password": "new-password"}).json() == {"ok": True}
+        assert c.get("/profile", headers=old).status_code == 401  # every earlier session is logged out
+        assert c.post("/auth/reset", json={"email": "rita@x.com", "otp": code, "password": "again-pass"}).status_code == 401  # used
+        assert c.post("/auth/login", json={"login": "rita", "password": "old-password"}).status_code == 401
+        assert c.post("/auth/login", json={"login": "rita", "password": "new-password"}).status_code == 200
 
 
 def test_full_flow(monkeypatch):
@@ -53,7 +110,8 @@ def test_full_flow(monkeypatch):
         d = c.get(f"/documents/{r.json()['id']}").json()
         assert d["status"] == "done", d["extraction"]
         hb = next(o for o in d["observations"] if o["loinc_code"] == "718-7")
-        assert hb["interpretation"] == "L"  # female range 12-15
+        assert hb["interpretation"] == "L"  # 10.8 is low for either sex
+        assert not any("seems to be for" in w for w in d["extraction"]["_warnings"])  # name is still the username
         assert next(o for o in d["observations"] if o["display_name"] == "Potassium")["interpretation"] == "HH"
         assert d["medications"][0]["salt"] == "Paracetamol" and d["medications"][0]["per_day"] == 2
 
@@ -72,7 +130,7 @@ def test_full_flow(monkeypatch):
         assert c.post("/abha/import").status_code == 409
         assert c.post("/abha/link", json={"abha": "bad"}).status_code == 422
         otp = c.post("/abha/link", json={"abha": "12-3456-7890-1234"}).json()["demo_otp"]
-        assert c.post("/abha/verify", json={"otp": "000000"}).status_code == 401
+        assert c.post("/abha/verify", json={"otp": "000000"}).status_code == 400
         assert c.post("/abha/verify", json={"otp": otp}).status_code == 200
         assert len(c.post("/abha/import").json()["imported_document_ids"]) == 2
         assert c.post("/abha/import").json()["imported_document_ids"] == []  # idempotent
@@ -80,7 +138,7 @@ def test_full_flow(monkeypatch):
 
         Bundle.model_validate(c.get("/profile/fhir").json())
         assert c.delete("/profile").status_code == 204
-        assert c.get("/documents").json() == []  # data gone; a fresh demo profile is recreated
+        assert c.get("/documents").status_code == 401  # account and data gone
 
 
 def test_extraction_failure_marks_failed(monkeypatch):
@@ -125,4 +183,38 @@ def test_visitors_are_isolated():
     with TestClient(app, headers=_visit()) as a, TestClient(app, headers=_visit()) as b:  # separate tabs
         a.put("/profile", json={"name": "Alice"})
         assert a.get("/profile").json()["name"] == "Alice"
-        assert b.get("/profile").json()["name"] == "Guest"
+        assert b.get("/profile").json()["name"] != "Alice"
+
+
+def test_otp_and_rate_limits(monkeypatch):
+    from datetime import timedelta
+    from app.routers import auth as auth_router
+    monkeypatch.setattr(auth_router, "RESEND_AFTER", timedelta(0))
+    with TestClient(app) as c:
+        c.post("/auth/signup", json={"username": "tom", "email": " Tom@X.com ", "password": "password1"})  # trimmed
+        code = SENT["tom@x.com"]
+        wrong = f"{(int(code) + 1) % 10**6:06d}"
+        for _ in range(5):
+            assert c.post("/auth/verify", json={"email": "tom@x.com", "otp": wrong}).json()["detail"] == "Wrong code"
+        assert c.post("/auth/verify", json={"email": "tom@x.com", "otp": code}).status_code == 401  # tries used up
+
+        auth_router._hits.clear()
+        for _ in range(5):
+            c.post("/auth/login", json={"login": "tom", "password": "bad-guess"})
+        assert c.post("/auth/login", json={"login": "tom", "password": "password1"}).status_code == 429
+
+        auth_router._hits.clear()
+        monkeypatch.setattr(auth_router, "RESEND_AFTER", timedelta(hours=1))
+        assert c.post("/auth/forgot", json={"email": "tom@x.com"}).status_code == 200
+        assert c.post("/auth/forgot", json={"email": "tom@x.com"}).status_code == 200  # the hidden 429 doesn't leak
+
+
+def test_failed_email_keeps_no_account(monkeypatch):
+    def boom(*_):
+        raise OSError("smtp down")
+    with TestClient(app) as c:
+        monkeypatch.setattr(auth, "send_otp", boom)
+        body = {"username": "sam", "email": "sam@x.com", "password": "password1"}
+        assert c.post("/auth/signup", json=body).status_code == 502
+        monkeypatch.undo()
+        assert c.post("/auth/signup", json=body).status_code == 200  # not "already registered"
