@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 import hashlib
 import hmac
 import json
 import logging
 import secrets
+=======
+import logging
+>>>>>>> 022bfee (update bot and few frontend fixes)
 import shutil
 import smtplib
 import urllib.request
@@ -20,6 +24,7 @@ from .config import settings
 from .db import get_db
 from .models import Account, Profile, User
 
+<<<<<<< HEAD
 TOKEN_TTL = timedelta(days=7)
 log = logging.getLogger(__name__)
 
@@ -83,6 +88,32 @@ def delete_profile_data(db: Session, p: Profile):
         shutil.rmtree(Path(settings.STORAGE_DIR) / str(d.id), ignore_errors=True)
     db.delete(p.user)  # cascades to account, profile, documents and every clinical row
     db.commit()
+=======
+log = logging.getLogger(__name__)
+TTL = timedelta(hours=24)
+
+
+def purge_stale(db: Session):
+    """Delete users (and their files) whose visit is older than TTL, plus pre-session users with no visit."""
+    # ponytail: age is from first request, so a tab left open > 24h loses its data; track last_seen if that matters
+    stale = db.scalars(select(User).outerjoin(Visit)
+                       .where(or_(Visit.token.is_(None), Visit.created_at < datetime.utcnow() - TTL))).all()
+    for u in stale:
+        try:
+            if u.profile:
+                delete_profile_data(db, u.profile)
+        except IntegrityError:  # row still referenced by a table outside our models; cleanup must never block a visitor
+            db.rollback()
+            log.warning("purge skipped user %s", u.id, exc_info=True)
+
+
+def delete_profile_data(db: Session, p: Profile):
+    doc_ids = [d.id for d in p.documents]
+    db.delete(p.user)  # cascades to visit, profile, documents and every clinical row
+    db.commit()  # files go only once the rows are gone
+    for i in doc_ids:
+        shutil.rmtree(Path(settings.STORAGE_DIR) / str(i), ignore_errors=True)
+>>>>>>> 022bfee (update bot and few frontend fixes)
 
 
 def current_profile(cred: HTTPAuthorizationCredentials | None = Depends(HTTPBearer(auto_error=False)),

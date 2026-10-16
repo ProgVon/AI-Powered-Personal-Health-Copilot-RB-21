@@ -69,6 +69,17 @@ def get_document(doc_id: int, p: Profile = Depends(current_profile), db: Session
             "conditions": [_row(c) for c in d.conditions], "allergies": [_row(a) for a in d.allergies]}
 
 
+@router.post("/{doc_id}/rescan")
+def rescan(doc_id: int, bg: BackgroundTasks, p: Profile = Depends(current_profile), db: Session = Depends(get_db)):
+    d = _own(db, p, doc_id)
+    if d.status != "failed" or not d.file_path:  # failures happen before persist, so no rows to clear
+        raise HTTPException(409, "Only failed uploads can be rescanned")
+    d.status, d.extraction = "processing", None
+    db.commit()
+    bg.add_task(run_ingest, d.id, p.id)
+    return doc_brief(d)
+
+
 @router.get("/{doc_id}/file")
 def get_file(doc_id: int, p: Profile = Depends(current_profile), db: Session = Depends(get_db)):
     d = _own(db, p, doc_id)

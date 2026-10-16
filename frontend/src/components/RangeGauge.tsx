@@ -23,7 +23,7 @@ export default function RangeGauge({ value, low, high, unit, flag, compact = fal
   return (
     <div role="img" aria-label={label} className={compact ? "pb-4 pt-1.5" : "pb-5 pt-2"}>
       <div className="relative h-2.5 rounded-full bg-line">
-        <div className="absolute inset-y-0 rounded-full border border-ok/40 bg-ok/25"
+        <div className="absolute inset-y-0 rounded-full border border-ok bg-ok-soft"
           style={{ left: pct(bandLo), width: `calc(${pct(bandHi)} - ${pct(bandLo)})` }} />
         <div className="absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-surface shadow-md transition-all duration-700"
           style={{ left: pct(value), background: `var(--${f.tone})` }} />

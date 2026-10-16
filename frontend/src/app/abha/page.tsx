@@ -55,9 +55,7 @@ export default function Abha() {
         <p className="mt-1 max-w-xl text-muted">{t("abhaSub")}</p>
       </header>
 
-      <div className="reveal relative overflow-hidden rounded-3xl border border-line p-6 text-ink shadow-card md:p-8"
-        style={{ background: "linear-gradient(135deg, var(--brand-soft) 0%, var(--surface-2) 60%, var(--surface) 100%)" }}>
-        <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-brand/10 blur-2xl" aria-hidden />
+      <div className="reveal relative overflow-hidden rounded-3xl border border-line bg-surface p-6 text-ink shadow-card md:p-8">
         <div className="relative flex items-start justify-between">
           <div><p className="text-xs font-semibold uppercase tracking-[.2em] text-muted">{t("yourAbha")}</p>
             <p className="h-display mt-1 text-xl font-semibold">{profile?.name}</p></div>
@@ -65,7 +63,7 @@ export default function Abha() {
         </div>
         <p className="relative mt-8 font-mono text-2xl tracking-widest md:text-3xl">{pending || "••-••••-••••-••••"}</p>
         <div className="relative mt-5">
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${linked ? "bg-ok-soft text-ok" : "bg-surface/80 text-muted ring-1 ring-line"}`}>
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${linked ? "bg-ok-soft text-ok" : "bg-surface-2 text-muted ring-1 ring-line"}`}>
             <Icon name={linked ? "check" : "link"} className="h-3.5 w-3.5" strokeWidth={2.4} />
             {linked ? t("abhaLinked") : pending ? t("abhaPending") : t("notSet")}
           </span>

@@ -18,7 +18,7 @@ export default function Timeline({ items }: { items: TimelineItem[] }) {
     <div className="space-y-8">
       {[...groups].map(([month, xs]) => (
         <section key={month}>
-          <h2 className="eyebrow sticky top-0 z-10 -mx-1 mb-3 bg-bg/85 px-1 py-2 backdrop-blur">{month}</h2>
+          <h2 className="eyebrow sticky top-0 z-10 -mx-1 mb-3 bg-bg px-1 py-2">{month}</h2>
           <ol className="relative space-y-3 pl-12 before:absolute before:bottom-2 before:left-[19px] before:top-2 before:w-0.5 before:rounded before:bg-line">
             {xs.map((i, k) => {
               const kind = KIND[i.type] ?? KIND.document;

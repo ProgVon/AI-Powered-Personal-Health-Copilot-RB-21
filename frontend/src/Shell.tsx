@@ -3,7 +3,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+<<<<<<< HEAD
 import { api, getToken, Profile, setToken } from "./api";
+=======
+import { api, Profile } from "./api";
+import Companion from "./components/Companion";
+>>>>>>> 022bfee (update bot and few frontend fixes)
 import { ToastProvider } from "./components/Toast";
 import Icon, { IconName } from "./components/Icon";
 import Login from "./components/Login";
@@ -78,7 +83,7 @@ function Layout({ children }: { children: ReactNode }) {
     <div className="app-shell min-h-screen md:grid md:grid-cols-[17rem_1fr]">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-surface focus:p-3">{t("skip")}</a>
 
-      <aside className="no-print sticky top-0 hidden h-screen flex-col gap-6 border-r border-line bg-surface/70 p-5 backdrop-blur md:flex">
+      <aside className="no-print sticky top-0 hidden h-screen flex-col gap-6 border-r border-line bg-surface p-5 md:flex">
         <Logo />
         <nav className="flex flex-col gap-1">
           {NAV.map((n) => <Link key={n.to} href={n.to} className={link(active(n))}><Icon name={n.icon} />{t(`nav.${n.key}`)}</Link>)}
@@ -95,7 +100,7 @@ function Layout({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="min-w-0 pb-28 md:pb-12">
-        <header className="no-print sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-bg/85 px-4 py-3 backdrop-blur md:hidden">
+        <header className="no-print sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-bg px-4 py-3 md:hidden">
           <Logo /><Controls />
         </header>
         <main id="main" className="mx-auto max-w-5xl px-4 py-6 md:px-10 md:py-10">
@@ -103,13 +108,14 @@ function Layout({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      <nav aria-label="Primary" className="no-print fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 gap-1 rounded-2xl border border-line bg-surface/95 p-1.5 shadow-card backdrop-blur md:hidden">
+      <nav aria-label="Primary" className="no-print fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 gap-1 rounded-2xl border border-line bg-surface p-1.5 shadow-card md:hidden">
         {NAV.map((n) => (
           <Link key={n.to} href={n.to}
             className={`flex flex-col items-center gap-0.5 rounded-xl py-2 text-[11px] font-semibold ${active(n) ? "bg-brand-soft text-brand-strong" : "text-muted"}`}>
             <Icon name={n.icon} />{t(`nav.${n.key}`)}
           </Link>))}
       </nav>
+      <Companion />
     </div>
   );
 }

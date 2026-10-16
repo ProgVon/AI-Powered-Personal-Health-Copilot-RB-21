@@ -60,6 +60,19 @@ def _extract_retrying(state):
         return extract(state)
 
 
+BUSY_HINTS = ("timeout", "timed out", "429", "503", "504", "529", "overloaded", "resource_exhausted", "unavailable", "rate limit")
+
+
+def _busy(e: BaseException | None) -> bool:
+    """Provider overload or timeout rather than an unreadable document; walks the cause chain."""
+    # ponytail: string match across providers' error types; switch to status codes if false positives show up
+    while e:
+        if any(h in f"{type(e).__name__} {e}".lower() for h in BUSY_HINTS):
+            return True
+        e = e.__cause__ or e.__context__
+    return False
+
+
 STEPS = [prepare, _extract_retrying, normalize, persist, summarize]  # each takes the state dict and returns new keys
 
 
@@ -73,5 +86,5 @@ def run_ingest(document_id: int, profile_id: int):
         log.exception("ingestion failed")
         with SessionLocal() as db:
             doc = db.get(Document, document_id)
-            doc.status, doc.extraction = "failed", {"_error": str(e)}
+            doc.status, doc.extraction = "failed", {"_error": str(e), "_busy": _busy(e)}
             db.commit()
