@@ -183,7 +183,6 @@ def test_visitors_are_isolated():
     with TestClient(app, headers=_visit()) as a, TestClient(app, headers=_visit()) as b:  # separate tabs
         a.put("/profile", json={"name": "Alice"})
         assert a.get("/profile").json()["name"] == "Alice"
-<<<<<<< HEAD
         assert b.get("/profile").json()["name"] != "Alice"
 
 
@@ -241,8 +240,6 @@ def test_send_mail_uses_brevo_when_keyed(monkeypatch):
     assert sent["url"] == "https://api.brevo.com/v3/smtp/email" and sent["key"] == "xkeysib-test"
     assert sent["body"]["sender"] == {"name": "Health Copilot", "email": "me@gmail.com"}
     assert sent["body"]["to"] == [{"email": "ann@x.com"}] and sent["body"]["textContent"] == "code 123456"
-=======
-        assert b.get("/profile").json()["name"] == "Guest"
 
 
 def test_busy_failure_can_be_rescanned(monkeypatch):
@@ -259,4 +256,3 @@ def test_busy_failure_can_be_rescanned(monkeypatch):
         assert c.get(f"/documents/{did}").json()["status"] == "done"
         assert c.post(f"/documents/{did}/rescan").status_code == 409  # only failed docs
         c.delete("/profile")
->>>>>>> 022bfee (update bot and few frontend fixes)

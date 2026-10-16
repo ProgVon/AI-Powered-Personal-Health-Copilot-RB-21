@@ -3,12 +3,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-<<<<<<< HEAD
 import { api, getToken, Profile, setToken } from "./api";
-=======
-import { api, Profile } from "./api";
 import Companion from "./components/Companion";
->>>>>>> 022bfee (update bot and few frontend fixes)
 import { ToastProvider } from "./components/Toast";
 import Icon, { IconName } from "./components/Icon";
 import Login from "./components/Login";
