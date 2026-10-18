@@ -37,9 +37,7 @@ export default function Home() {
 
   return (
     <div className="space-y-8">
-      <section className="reveal relative overflow-hidden rounded-3xl border border-line p-6 text-ink shadow-card md:p-9"
-        style={{ background: "linear-gradient(135deg, var(--brand-soft) 0%, var(--surface-2) 60%, var(--surface) 100%)" }}>
-        <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-brand/10 blur-3xl" aria-hidden />
+      <section className="reveal relative overflow-hidden rounded-3xl border border-line bg-surface p-6 text-ink shadow-card md:p-9">
         <svg viewBox="0 0 400 80" preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 bottom-0 h-24 w-full text-brand opacity-30" aria-hidden>
           <path className="ecg" d="M0 44 H120 L140 44 L155 8 L175 76 L190 44 H262 L276 44 L288 24 L300 44 H400" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -50,8 +48,8 @@ export default function Home() {
               <p className="text-sm text-muted">{greet}</p>
               <h1 className="h-display text-3xl font-semibold leading-tight md:text-4xl">{p.name}</h1>
               <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
-                {p.age != null && <span className="rounded-full bg-surface/80 px-2.5 py-1 ring-1 ring-line">{t("age", { n: p.age })}</span>}
-                <span className="inline-flex items-center gap-1 rounded-full bg-surface/80 px-2.5 py-1 ring-1 ring-line">
+                {p.age != null && <span className="rounded-full bg-surface-2 px-2.5 py-1 ring-1 ring-line">{t("age", { n: p.age })}</span>}
+                <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 ring-1 ring-line">
                   <Icon name="shield" className="h-3.5 w-3.5" />{p.abha.linked ? t("abhaLinked") : t("abhaNotLinked")}
                 </span>
               </div>

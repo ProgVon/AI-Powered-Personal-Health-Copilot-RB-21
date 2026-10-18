@@ -196,7 +196,7 @@ def test_extraction_failure_marks_failed(monkeypatch):
     with TestClient(app, headers=_visit()) as c:
         r = c.post("/documents", files={"file": ("a.png", _png(), "image/png")})
         d = c.get(f"/documents/{r.json()['id']}").json()
-        assert d["status"] == "failed" and "api down" in d["extraction"]["_error"]
+        assert d["status"] == "failed" and "api down" in d["extraction"]["_error"] and not d["extraction"]["_busy"]
         assert len(calls) == 2  # one retry, then give up
 
 
@@ -287,3 +287,19 @@ def test_send_mail_uses_brevo_when_keyed(monkeypatch):
     assert sent["url"] == "https://api.brevo.com/v3/smtp/email" and sent["key"] == "xkeysib-test"
     assert sent["body"]["sender"] == {"name": "Health Copilot", "email": "me@gmail.com"}
     assert sent["body"]["to"] == [{"email": "ann@x.com"}] and sent["body"]["textContent"] == "code 123456"
+
+
+def test_busy_failure_can_be_rescanned(monkeypatch):
+    class Slow(FakeLLM):
+        def invoke(self, *_):
+            raise TimeoutError("Request timed out")
+    monkeypatch.setattr(graph, "structured", lambda *a: Slow(None))
+    monkeypatch.setattr(summarize, "structured", lambda *a: FakeLLM(SUMMARY))
+    with TestClient(app, headers=_visit()) as c:
+        did = c.post("/documents", files={"file": ("a.png", _png(), "image/png")}).json()["id"]
+        assert c.get(f"/documents/{did}").json()["extraction"]["_busy"] is True
+        monkeypatch.setattr(graph, "structured", lambda *a: FakeLLM(EXTRACTION))
+        assert c.post(f"/documents/{did}/rescan").status_code == 200
+        assert c.get(f"/documents/{did}").json()["status"] == "done"
+        assert c.post(f"/documents/{did}/rescan").status_code == 409  # only failed docs
+        c.delete("/profile")

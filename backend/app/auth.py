@@ -64,10 +64,11 @@ def send_mail(to: str, subject: str, text: str):
 
 
 def delete_profile_data(db: Session, p: Profile):
-    for d in p.documents:
-        shutil.rmtree(Path(settings.STORAGE_DIR) / str(d.id), ignore_errors=True)
+    doc_ids = [d.id for d in p.documents]
     db.delete(p.user)  # cascades to account, profile, documents and every clinical row
-    db.commit()
+    db.commit()  # files go only once the rows are gone
+    for i in doc_ids:
+        shutil.rmtree(Path(settings.STORAGE_DIR) / str(i), ignore_errors=True)
 
 
 def current_profile(cred: HTTPAuthorizationCredentials | None = Depends(HTTPBearer(auto_error=False)),

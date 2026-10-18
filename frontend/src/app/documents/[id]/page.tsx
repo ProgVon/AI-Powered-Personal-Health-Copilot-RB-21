@@ -39,6 +39,7 @@ export default function DocumentDetail() {
   const [busy, setBusy] = useState(false);
   const [file, setFile] = useState<{ url: string; type: string } | null>(null);
   const [tab, setTab] = useState<Tab>("summary");
+  const [scan, setScan] = useState(0);  // bumped by Rescan to restart polling
 
   useEffect(() => {  // poll until the summary lands; extracted data shows as soon as status is "summarizing"
     let timer: number;
@@ -47,7 +48,7 @@ export default function DocumentDetail() {
       .catch(() => { timer = window.setTimeout(load, 3000); });  // a hiccup (e.g. server waking up) must not stop polling
     load();
     return () => clearTimeout(timer);
-  }, [id]);
+  }, [id, scan]);
   useEffect(() => { if (doc?.source === "upload" && doc.status !== "processing") api.file(id).then(setFile).catch(() => {}); }, [id, doc?.source, doc?.status === "processing"]);
   useEffect(() => {  // summary follows the UI language; translations are cached server-side
     if (doc?.status !== "done" || !doc.summary) return;
@@ -57,6 +58,8 @@ export default function DocumentDetail() {
 
   if (!doc) return <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-64" /></div>;
   if (doc.status === "processing") return <Processing />;
+  if (doc.status === "failed" && doc.extraction?._busy)
+    return <EmptyState icon="alert" title={t("busyTitle")} sub={t("busySub")}><button className="btn btn-primary mt-2" onClick={() => api.rescan(id).then(() => setScan((n) => n + 1))}><Icon name="refresh" className="h-4 w-4" />{t("rescan")}</button></EmptyState>;
   if (doc.status === "failed")
     return <EmptyState icon="alert" title={t("failedTitle")} sub={t("failedSub")}><Link href="/upload" className="btn btn-primary mt-2"><Icon name="upload" className="h-4 w-4" />{t("tryAgain")}</Link></EmptyState>;
 

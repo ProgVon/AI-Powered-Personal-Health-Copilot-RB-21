@@ -64,6 +64,8 @@ body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); 
   background: var(--brand); animation: indeterminate 1.3s ease-in-out infinite; }
 .pop { animation: pop .45s cubic-bezier(.2,.9,.3,1.3) both; }
 .toast { animation: slide-in .3s ease both; }
+@keyframes spin-x { 50% { transform: scaleX(-1); } }  /* side-on view of a spinning propeller */
+.propeller { transform-box: fill-box; transform-origin: center; animation: spin-x .6s linear infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }

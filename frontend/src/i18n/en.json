@@ -18,6 +18,7 @@
   "print": "Print / Save PDF", "warnings": "Please double-check",
   "processing": {"title": "Working on your document", "s1": "Reading the page", "s2": "Understanding the details", "s3": "Writing your summary"},
   "failedTitle": "We couldn't read this document", "failedSub": "Try a clearer, well-lit photo or the original PDF.", "tryAgain": "Upload again",
+  "busyTitle": "We're a little busy right now", "busySub": "Too many requests at the moment, so we couldn't read your document. Please try again shortly or tap Rescan.", "rescan": "Rescan",
   "aiSummary": "Plain-language summary", "keyPoints": "Key points", "stands": "What stands out",
   "meaning": "What it means", "reasons": "Common reasons", "askDoctor": "Ask your doctor", "nextSteps": "Next steps",
   "medicines": "Medicines", "labResults": "Lab results", "reference": "Reference", "noData": "Nothing was extracted from this document.",
@@ -36,6 +37,7 @@
   "abhaLinked": "ABHA linked", "abhaNotLinked": "ABHA not linked", "abhaPending": "Awaiting OTP", "yourAbha": "Your ABHA", "notSet": "Not set up",
   "mockNote": "Demo only: real ABDM integration needs sandbox registration.",
   "disclaimer": "This app helps you understand your records. It does not provide diagnosis or treatment. Always consult a qualified doctor.",
+  "whatsNew": "What's new", "noUpdates": "No updates yet.",
   "language": "Language", "theme": "Toggle dark mode", "serverDown": "Can't reach the server", "serverDownSub": "Make sure the backend is running on port 8000.",
   "abdmBadge": "ABDM",
   "auth": {

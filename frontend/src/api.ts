@@ -36,7 +36,7 @@ export type Summary = {
 export type Doc = {
   id: number; doc_type: string | null; doc_date: string | null; facility: string | null; status: string; source: string;
   created_at?: string; practitioner?: string | null;
-  summary?: Summary | null; extraction?: { _warnings?: string[]; _error?: string } | null;
+  summary?: Summary | null; extraction?: { _warnings?: string[]; _error?: string; _busy?: boolean } | null;
   observations?: Obs[]; medications?: Med[]; conditions?: { name: string }[]; allergies?: { substance: string }[];
 };
 export type Obs = { id: number; display_name: string; value_num: number | null; value_text: string | null; unit: string | null; ref_low: number | null; ref_high: number | null; interpretation: string | null; note: string | null };
@@ -55,6 +55,7 @@ export const api = {
   upload: (f: File) => { const fd = new FormData(); fd.append("file", f); return req<Doc>("/documents", { method: "POST", body: fd }); },
   docs: () => req<Doc[]>("/documents"),
   doc: (id: number) => req<Doc>(`/documents/${id}`),
+  rescan: (id: number) => post<Doc>(`/documents/${id}/rescan`),
   summary: (id: number, lang: string) => req<Summary>(`/documents/${id}/summary?lang=${lang}`),
   file: async (id: number) => {
     const r = await fetch(`${BASE}/documents/${id}/file`, { headers: authHeader() });

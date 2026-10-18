@@ -7,7 +7,7 @@ import { useToast } from "./Toast";
 import { Spinner } from "./ui";
 
 type Stage = "uploading" | "reading" | "done" | "failed";
-type Item = { key: string; name: string; size: number; preview?: string; id?: number; stage: Stage; error?: string };
+type Item = { key: string; name: string; size: number; preview?: string; id?: number; stage: Stage; error?: string; busy?: boolean };
 const OK = ["image/jpeg", "image/png", "application/pdf"];
 const MAX = 15 * 1024 * 1024;
 const kb = (n: number) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
@@ -24,6 +24,18 @@ export default function UploadZone() {
 
   const patch = (key: string, p: Partial<Item>) => setItems((xs) => xs.map((x) => (x.key === key ? { ...x, ...p } : x)));
 
+  function watch(key: string, id: number) {  // results are viewable once extraction is done
+    patch(key, { id, stage: "reading", error: undefined, busy: false });
+    const timer = window.setInterval(async () => {
+      const d = await api.doc(id).catch(() => null);
+      if (!d || d.status === "processing") return;
+      clearInterval(timer);
+      const busy = d.status === "failed" && !!d.extraction?._busy;
+      patch(key, { stage: d.status === "failed" ? "failed" : "done", busy, error: busy ? t("busySub") : undefined });
+    }, 1000);
+    timers.current.push(timer);
+  }
+
   async function add(files: FileList | File[] | null) {
     for (const f of Array.from(files ?? [])) {
       const key = crypto.randomUUID();
@@ -32,13 +44,7 @@ export default function UploadZone() {
       setItems((xs) => [{ key, name: f.name, size: f.size, preview, stage: bad ? "failed" : "uploading", error: bad }, ...xs]);
       if (bad) { toast(`${f.name}: ${bad}`, true); continue; }
       try {
-        const { id } = await api.upload(f);
-        patch(key, { id, stage: "reading" });
-        const timer = window.setInterval(async () => {  // results are viewable once extraction is done
-          const d = await api.doc(id).catch(() => null);
-          if (d && d.status !== "processing") { clearInterval(timer); patch(key, { stage: d.status === "failed" ? "failed" : "done" }); }
-        }, 1000);
-        timers.current.push(timer);
+        watch(key, (await api.upload(f)).id);
       } catch (e) { patch(key, { stage: "failed", error: (e as Error).message }); toast((e as Error).message, true); }
     }
   }
@@ -50,8 +56,6 @@ export default function UploadZone() {
         onDragLeave={() => setOver(false)} onDrop={(e) => { e.preventDefault(); setOver(false); add(e.dataTransfer.files); }}
         className={`reveal relative overflow-hidden rounded-3xl border-2 border-dashed p-8 text-center transition md:p-12
           ${over ? "scale-[1.01] border-brand bg-brand-soft" : "border-line bg-surface"}`}>
-        <div className="pointer-events-none absolute inset-0 opacity-60"
-          style={{ background: "radial-gradient(60% 50% at 50% 0%, var(--brand-soft), transparent)" }} aria-hidden />
         <div className="relative flex flex-col items-center gap-4">
           <div className={`grid h-16 w-16 place-items-center rounded-2xl bg-brand text-on-brand shadow-lg transition ${over ? "-translate-y-1" : ""}`}>
             <Icon name="upload" className="h-8 w-8" strokeWidth={1.8} />
@@ -92,6 +96,7 @@ export default function UploadZone() {
                     ? <p role="alert" className="mt-1.5 flex items-center gap-1.5 text-sm text-crit"><Icon name="alert" className="h-4 w-4" />{i.error ?? t("failedSub")}</p>
                     : <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-ok"><span className="pop"><Icon name="check" className="h-4 w-4" strokeWidth={2.6} /></span>{t("ready")}</p>}
               </div>
+              {i.busy && i.id && <button className="btn btn-soft" onClick={() => api.rescan(i.id!).then(() => watch(i.key, i.id!)).catch((e) => toast((e as Error).message, true))}><Icon name="refresh" className="h-4 w-4" />{t("rescan")}</button>}
               {i.stage === "done" && i.id && <Link className="btn btn-soft" href={`/documents/${i.id}`}>{t("viewSummary")}<Icon name="chevron" className="h-4 w-4" /></Link>}
             </li>))}
         </ul>)}
