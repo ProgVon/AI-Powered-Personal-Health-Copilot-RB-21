@@ -4,10 +4,8 @@ import json
 import logging
 import secrets
 import shutil
-import smtplib
 import urllib.request
 from datetime import datetime, timedelta, timezone
-from email.message import EmailMessage
 from email.utils import parseaddr
 from pathlib import Path
 
@@ -53,29 +51,16 @@ def send_otp(email: str, code: str):
 
 
 def send_mail(to: str, subject: str, text: str):
-    sender = settings.SMTP_FROM or settings.SMTP_USER
-    if settings.BREVO_API_KEY:  # HTTPS email API: works on hosts that block SMTP ports (e.g. Render's free plan)
-        name, addr = parseaddr(sender)
-        body = {"sender": {"name": name or "Health Copilot", "email": addr}, "to": [{"email": to}],
-                "subject": subject, "textContent": text}
-        req = urllib.request.Request("https://api.brevo.com/v3/smtp/email", json.dumps(body).encode(), method="POST",
-                                     headers={"api-key": settings.BREVO_API_KEY, "content-type": "application/json",
-                                              "accept": "application/json"})
-        urllib.request.urlopen(req, timeout=15).close()  # raises on any non-2xx, so the caller reports the failure
+    if not settings.BREVO_API_KEY:
+        log.warning("BREVO_API_KEY not set; email to %s: %s", to, text)
         return
-    if not settings.SMTP_HOST:
-        log.warning("SMTP_HOST not set; email to %s: %s", to, text)
-        return
-    msg = EmailMessage()
-    msg["Subject"], msg["From"], msg["To"] = subject, sender, to
-    msg.set_content(text)
-    smtp_cls = smtplib.SMTP_SSL if settings.SMTP_PORT == 465 else smtplib.SMTP
-    with smtp_cls(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as s:
-        if settings.SMTP_PORT != 465:
-            s.starttls()
-        if settings.SMTP_USER:
-            s.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        s.send_message(msg)
+    name, addr = parseaddr(settings.SMTP_FROM)
+    body = {"sender": {"name": name or "Health Copilot", "email": addr}, "to": [{"email": to}],
+            "subject": subject, "textContent": text}
+    req = urllib.request.Request("https://api.brevo.com/v3/smtp/email", json.dumps(body).encode(), method="POST",
+                                 headers={"api-key": settings.BREVO_API_KEY, "content-type": "application/json",
+                                          "accept": "application/json"})
+    urllib.request.urlopen(req, timeout=15).close()  # raises on any non-2xx, so the caller reports the failure
 
 
 def delete_profile_data(db: Session, p: Profile):

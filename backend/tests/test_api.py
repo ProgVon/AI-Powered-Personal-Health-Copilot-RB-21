@@ -1,5 +1,6 @@
 """End-to-end through the real ingestion pipeline with the LLM stubbed."""
 import io
+import time
 import uuid
 
 from fastapi.testclient import TestClient
@@ -8,8 +9,10 @@ from PIL import Image
 
 from app import auth
 from app.ingestion import graph, summarize
+from app.ingestion.normalize import normalize_record
 from app.ingestion.schemas import DocumentExtraction, Summary
 from app.main import app
+from app.routers import documents
 
 EXTRACTION = DocumentExtraction.model_validate({
     "doc_type": "lab_report", "doc_date": "2026-09-01", "patient_name": "Sunita Devi", "facility": "Lab X",
@@ -63,6 +66,7 @@ def test_auth_flow():
         assert c.post("/auth/signup", json={**body, "username": "other"}).json() == {"email": "ann@x.com"}  # looks new
         assert SENT["ann@x.com"] == first  # but no new code: the owner gets an "already registered" note instead
         assert c.post("/auth/signup", json={**body, "email": "new@x.com"}).status_code == 409  # username taken
+        assert c.post("/auth/signup", json={**body, "username": "ANN_1", "email": "new@x.com"}).status_code == 409
         assert c.post("/auth/signup", json={**body, "password": "short"}).status_code == 422
         assert c.post("/auth/verify", json={"email": "ann@x.com", "otp": f"{(int(SENT['ann@x.com']) + 1) % 10**6:06d}"}).status_code == 401
         token = c.post("/auth/verify", json={"email": "ann@x.com", "otp": SENT["ann@x.com"]}).json()["token"]
@@ -72,7 +76,7 @@ def test_auth_flow():
         assert c.post("/auth/login", json={"login": "ann_1", "password": "wrong-pass"}).status_code == 401
         assert c.post("/auth/login", json={"login": "nobody", "password": "password1"}).status_code == 401
         assert c.post("/auth/login", json={"login": "ANN@x.com", "password": "password1"}).status_code == 429  # right, but resend too soon
-        assert c.post("/auth/login", json={"login": "ann_1", "password": "password1"}).status_code == 429
+        assert c.post("/auth/login", json={"login": "Ann_1", "password": "password1"}).status_code == 429  # any case
 
 
 def test_password_reset(monkeypatch):
@@ -105,6 +109,8 @@ def test_full_flow(monkeypatch):
     monkeypatch.setattr(summarize, "structured", lambda *a: FakeLLM(SUMMARY))
     with TestClient(app, headers=_visit()) as c:
         assert c.post("/documents", files={"file": ("a.txt", b"x", "text/plain")}).status_code == 415
+        big = b"0" * (documents.MAX_BYTES + 1)
+        assert c.post("/documents", files={"file": ("a.png", big, "image/png")}).status_code == 413
 
         r = c.post("/documents", files={"file": ("a.png", _png(), "image/png")})
         d = c.get(f"/documents/{r.json()['id']}").json()
@@ -139,6 +145,44 @@ def test_full_flow(monkeypatch):
         Bundle.model_validate(c.get("/profile/fhir").json())
         assert c.delete("/profile").status_code == 204
         assert c.get("/documents").status_code == 401  # account and data gone
+
+
+def test_newer_normal_result_clears_old_abnormal(monkeypatch):
+    later = EXTRACTION.model_copy(update={"doc_date": "2026-10-01", "lab_results": [EXTRACTION.lab_results[0].model_copy(
+        update={"value": "14.0"})], "medications": []})
+    monkeypatch.setattr(summarize, "structured", lambda *a: FakeLLM(SUMMARY))
+    unreadable = later.model_copy(update={"doc_date": "2026-10-10", "lab_results": [EXTRACTION.lab_results[1].model_copy(
+        update={"value": "haemolysed"})]})
+    with TestClient(app, headers=_visit()) as c:
+        for ex in (later, EXTRACTION, unreadable):  # upload order must not matter, only the report dates
+            monkeypatch.setattr(graph, "structured", lambda *a, ex=ex: FakeLLM(ex))
+            c.post("/documents", files={"file": ("a.png", _png(), "image/png")})
+        # Hb: normal later clears the low one; Potassium: an unreadable later value must not hide the critical one
+        assert [a["test"] for a in c.get("/profile").json()["latest_abnormal"]] == ["Potassium"]
+        c.delete("/profile")
+
+
+def test_login_prefers_exact_username_over_old_case_twin():
+    with TestClient(app) as c:
+        c.post("/auth/signup", json={"username": "bobby", "email": "bobby@x.com", "password": "password1"})
+        with summarize.SessionLocal() as db:  # signup no longer allows this pair, but older databases may have it
+            u = auth.User()
+            u.profile = auth.Profile(name="Bobby")
+            u.account = auth.Account(username="Bobby", email="bobby2@x.com", password_hash=auth.hash_password("other-pass"))
+            db.add(u)
+            db.commit()
+        assert c.post("/auth/login", json={"login": "bobby", "password": "password1"}).status_code != 401
+        assert c.post("/auth/login", json={"login": "Bobby", "password": "other-pass"}).status_code != 401
+
+
+def test_summary_without_llm_keeps_critical_warning(monkeypatch):
+    def down(*_):
+        raise RuntimeError("api down")
+    monkeypatch.setattr(summarize, "structured", down)
+    out = summarize.build_summary(normalize_record(EXTRACTION.model_dump(), "", None, None)[0])
+    k = next(e for e in out["abnormal_explanations"] if e["test"] == "Potassium")
+    assert k["what_it_means"] == summarize.CRITICAL_MSG
+    assert len(out["abnormal_explanations"]) == 2  # Potassium once, plus Haemoglobin
 
 
 def test_extraction_failure_marks_failed(monkeypatch):
@@ -202,6 +246,9 @@ def test_otp_and_rate_limits(monkeypatch):
         for _ in range(5):
             c.post("/auth/login", json={"login": "tom", "password": "bad-guess"})
         assert c.post("/auth/login", json={"login": "tom", "password": "password1"}).status_code == 429
+
+        auth_router._hits.update({f"ip:{i}": [time.monotonic()] for i in range(50_001)})  # a spoofed-IP flood
+        assert c.post("/auth/login", json={"login": "tom", "password": "password1"}).status_code == 429  # still blocked
 
         auth_router._hits.clear()
         monkeypatch.setattr(auth_router, "RESEND_AFTER", timedelta(hours=1))

@@ -48,9 +48,8 @@ def _observation(o, pid: str) -> dict:
 
 
 def _medication(m, pid: str) -> dict:
-    current = m.end_date is None or m.end_date >= date.today()
     dose = " ".join(x for x in (m.dose_pattern, m.timing) if x)
-    return {"resourceType": "MedicationRequest", "id": f"med-{m.id}", "status": "active" if current else "completed",
+    return {"resourceType": "MedicationRequest", "id": f"med-{m.id}", "status": "active" if m.current else "completed",
             "intent": "order", "subject": _ref("Patient", pid), "authoredOn": _iso(m.start_date),
             "medicationCodeableConcept": {"text": " ".join(x for x in (m.brand_name, m.strength) if x)},
             "dosageInstruction": [{"text": dose}] if dose else None,

@@ -2,7 +2,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..auth import current_profile, delete_profile_data
@@ -33,11 +33,12 @@ def _age(dob: date | None) -> int | None:
 
 
 def _profile_json(p: Profile, db: Session) -> dict:
-    today = date.today()
-    meds = _q(db, p, Medication, or_(Medication.end_date.is_(None), Medication.end_date >= today))  # "current" is computed
+    meds = [m for m in _q(db, p, Medication) if m.current]
+    # newest labelled result per test: a later normal value clears an old abnormal one, an unreadable one doesn't
     latest: dict[str, Observation] = {}
-    for o in sorted(_q(db, p, Observation, Observation.interpretation.in_(ABNORMAL)), key=lambda o: o.effective_at or date.min):
+    for o in sorted(_q(db, p, Observation, Observation.interpretation.is_not(None)), key=lambda o: o.effective_at or date.min):
         latest[o.display_name] = o
+    abnormal = [o for o in latest.values() if o.interpretation in ABNORMAL]
     return {
         "name": p.name, "dob": p.dob, "age": _age(p.dob), "sex": p.sex, "language": p.user.preferred_language,
         "abha": {"number": p.abha_number, "address": p.abha_address, "linked": bool(p.abha_linked_at)},
@@ -48,7 +49,7 @@ def _profile_json(p: Profile, db: Session) -> dict:
         "latest_abnormal": [{"test": o.display_name, "value": o.value_num if o.value_num is not None else o.value_text,
                              "unit": o.unit, "interpretation": o.interpretation, "date": o.effective_at,
                              "ref_low": o.ref_low, "ref_high": o.ref_high,
-                             "document_id": o.document_id} for o in latest.values()],
+                             "document_id": o.document_id} for o in abnormal],
     }
 
 

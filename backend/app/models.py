@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import JSON, Date, DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .db import Base
 
 CASCADE = "all, delete-orphan"
+OPEN_ENDED = timedelta(days=90)
 
 
 class User(Base):
@@ -103,6 +104,13 @@ class Medication(Base):
     end_date: Mapped[date | None]
     prescriber: Mapped[str | None]
     confidence: Mapped[float | None] = mapped_column(Float)
+
+    @property
+    def current(self) -> bool:
+        # shortcut: "continue" and an unreadable duration both leave end_date empty, so either counts as current
+        # for 90 days after the start; store "ongoing" separately if long-term medicines must stay listed
+        end = self.end_date or (self.start_date + OPEN_ENDED if self.start_date else None)
+        return end is None or end >= date.today()
 
 
 class Condition(Base):

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import or_, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
 from .. import auth
@@ -19,6 +19,7 @@ RESEND_AFTER = timedelta(seconds=30)
 MAX_TRIES = 5
 WINDOW, PER_IP, PER_ACCOUNT = 15 * 60, 20, 5  # code requests / login attempts per 15 minutes
 log = logging.getLogger(__name__)
+DUMMY_HASH = auth.hash_password(secrets.token_hex())  # unknown logins take as long as wrong passwords
 _hits: dict[str, list[float]] = {}  # shortcut: per process, move to the DB if you run more than one backend instance
 
 
@@ -27,8 +28,9 @@ def _limit(request: Request, who: str):
     # behind Vercel's proxy the client is the first X-Forwarded-For entry; it can be faked, the per-account limit can't
     ip = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "")).split(",")[0].strip()
     now = time.monotonic()
-    if len(_hits) > 50_000:  # bound memory against spoofed IPs
-        _hits.clear()
+    if len(_hits) > 50_000:  # bound memory against spoofed IPs, but keep the keys that are blocking someone right now
+        for key in [k for k, v in _hits.items() if now - v[-1] >= WINDOW or len(v) < PER_ACCOUNT]:
+            del _hits[key]
     for key, cap in ((f"ip:{ip}", PER_IP), (f"who:{who.lower()}", PER_ACCOUNT)):
         recent = [t for t in _hits.get(key, []) if now - t < WINDOW]
         if len(recent) >= cap:
@@ -67,7 +69,7 @@ def _issue_otp(db: Session, acc: Account):
     acc.otp_hash, acc.otp_expires, acc.otp_tries = auth.hash_otp(code), now + OTP_TTL, 0
     try:
         auth.send_otp(acc.email, code)
-    except Exception:  # bad SMTP settings or provider down; nothing is saved
+    except Exception:  # bad Brevo key/sender or Brevo down; nothing is saved
         log.exception("sending OTP failed")
         db.rollback()
         raise HTTPException(502, "Couldn't send the verification email, please try again")
@@ -78,7 +80,7 @@ def _issue_otp(db: Session, acc: Account):
 @router.post("/signup")
 def signup(body: Signup, request: Request, db: Session = Depends(get_db)):
     _limit(request, body.email)
-    if db.scalar(select(Account).where(Account.username == body.username)):
+    if db.scalar(select(Account).where(func.lower(Account.username) == body.username.lower())):  # "Ann" = "ann"
         raise HTTPException(409, "That username is taken")
     if db.scalar(select(Account).where(Account.email == body.email)):  # answer as if new, so emails can't be probed
         try:
@@ -99,8 +101,10 @@ def signup(body: Signup, request: Request, db: Session = Depends(get_db)):
 def login(body: Login, request: Request, db: Session = Depends(get_db)):
     who = body.login.strip()
     _limit(request, who)
-    acc = db.scalar(select(Account).where(or_(Account.email == who.lower(), Account.username == who)))
-    if not acc or not auth.check_password(body.password, acc.password_hash):
+    acc = db.scalar(select(Account).where(or_(Account.email == who.lower(), func.lower(Account.username) == who.lower()))
+                    .order_by((Account.username == who).desc()))  # older "Ann" and "ann" accounts: exact match wins
+    ok = auth.check_password(body.password, acc.password_hash if acc else DUMMY_HASH)
+    if not acc or not ok:
         raise HTTPException(401, "Wrong username/email or password")
     return _issue_otp(db, acc)
 

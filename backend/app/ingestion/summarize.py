@@ -74,8 +74,8 @@ def build_summary(record: dict) -> dict:
             prompt += SUMMARY_RETRY.format(hits=", ".join(hits))
     except Exception:
         log.exception("summary LLM failed; using template")
-    if summary is None:
-        return template_summary(record, abnormal)
+    if summary is None:  # the template still goes through the critical-value step below
+        summary = template_summary(record, abnormal)
     allowed = {a["test"] for a in rest}
     summary["abnormal_explanations"] = [
         {"test": c["test"], "value": c["value"], "status": c["status"], "what_it_means": CRITICAL_MSG,

@@ -1,7 +1,8 @@
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
+from app.models import Medication
 from app.ingestion.normalize import normalize_lab, normalize_medication, normalize_record, parse_range
 from app.rules import dosage, formulary, lab_catalog as labs, safety_text
 
@@ -97,6 +98,15 @@ def test_medication_normalize():
     assert (m["per_day"], m["duration_days"], m["end_date"]) == (2, 5, date(2026, 1, 6))
     assert m["timing"] == "morning, night, after food" and m["salt"] == "Paracetamol"
     assert normalize_medication({"name": "X", "confidence": 1}, None, None)["timing"] is None  # no crash
+
+
+def test_medication_current():
+    today = date.today()
+    assert Medication(start_date=today - timedelta(days=200), end_date=today).current  # still in its course
+    assert not Medication(start_date=today - timedelta(days=10), end_date=today - timedelta(days=1)).current
+    assert Medication(start_date=today - timedelta(days=30)).current  # no duration: recent counts
+    assert not Medication(start_date=today - timedelta(days=200)).current  # no duration: old course drops off
+    assert Medication().current  # undated: can't tell, so keep it listed
 
 
 def test_record_warnings():

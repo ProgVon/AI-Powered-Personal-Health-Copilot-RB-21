@@ -38,7 +38,7 @@ async def upload(file: UploadFile, bg: BackgroundTasks, p: Profile = Depends(cur
                  db: Session = Depends(get_db)):
     if file.content_type not in EXT:
         raise HTTPException(415, "Only JPG, PNG or PDF files are accepted")
-    data = await file.read()
+    data = await file.read(MAX_BYTES + 1)  # never hold more than the cap in memory
     if len(data) > MAX_BYTES:
         raise HTTPException(413, "File is larger than 15 MB")
     doc = Document(profile_id=p.id, mime=file.content_type, status="processing", source="upload")
@@ -89,6 +89,7 @@ def get_summary(doc_id: int, lang: str = "en", p: Profile = Depends(current_prof
         raise HTTPException(422, f"Supported languages: en, {', '.join(LANGS)}")
     cached = d.summary_i18n or {}
     if lang not in cached:
+        db.commit()  # end the read transaction so no pooled connection waits on the model call
         cached = {**cached, lang: translate_summary(d.summary, lang)}  # on demand, then cached
         d.summary_i18n = cached
         db.commit()
