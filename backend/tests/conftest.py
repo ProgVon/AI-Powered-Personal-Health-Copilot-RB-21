@@ -16,3 +16,9 @@ import pytest  # noqa: E402
 def _fresh_rate_limits():
     from app.routers import auth
     auth._hits.clear()  # tests sign up many users from one client
+
+
+@pytest.fixture(autouse=True)
+def _inline_ingest(monkeypatch):
+    from app.ingestion import graph
+    monkeypatch.setattr(graph.INGEST, "submit", lambda fn, *a: fn(*a))  # tests read results right after upload

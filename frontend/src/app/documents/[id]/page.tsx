@@ -50,6 +50,7 @@ export default function DocumentDetail() {
     return () => clearTimeout(timer);
   }, [id, scan]);
   useEffect(() => { if (doc?.source === "upload" && doc.status !== "processing") api.file(id).then(setFile).catch(() => {}); }, [id, doc?.source, doc?.status === "processing"]);
+  useEffect(() => () => { if (file) URL.revokeObjectURL(file.url); }, [file]);  // free the blob (up to 15 MB) on leave
   useEffect(() => {  // summary follows the UI language; translations are cached server-side
     if (doc?.status !== "done" || !doc.summary) return;
     setBusy(true);

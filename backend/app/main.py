@@ -16,10 +16,9 @@ logging.basicConfig(level=logging.INFO)  # show ingestion timings next to uvicor
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()  # create_all, no Alembic for the prototype
-    with SessionLocal() as db:  # background tasks die with the server; don't leave documents 'processing' forever
-        db.execute(update(Document).where(Document.status == "processing")
-                   .values(status="failed", extraction={"_error": "interrupted by server restart"}))
-        db.execute(update(Document).where(Document.status == "summarizing").values(status="done"))  # data is saved
+    with SessionLocal() as db:  # background tasks die with the server; mark them failed so the page offers Rescan
+        db.execute(update(Document).where(Document.status.in_(("processing", "summarizing")))
+                   .values(status="failed", extraction={"_error": "interrupted by server restart", "_busy": True}))
         db.commit()
     yield
 

@@ -86,6 +86,21 @@ def test_parse_range(t, r):
     assert parse_range(t) == r
 
 
+def test_parse_range_picks_the_persons_sex():
+    t = "Male: 13.0-17.0 Female: 12.0-15.0"
+    assert parse_range(t, "female") == (12, 15) and parse_range(t, "male") == (13, 17)
+    assert parse_range(t, None) == (None, None)  # unknown sex: leave it to the catalog's widest range
+    assert parse_range("M 13-17 / F 12-15 g/dL", "female") == (12, 15)
+    assert parse_range("Men 13-17, Women 12-15", "male") == (13, 17)
+    after = "13-17 (Male), 12-15 (Female)"  # label after the numbers: the range is the text before it
+    assert parse_range(after, "male") == (13, 17) and parse_range(after, "female") == (12, 15)
+    assert parse_range("13-17 g/dL (M)", "male") == (13, 17) and parse_range("13-17 g/dL (M)", "female") == (None, None)
+    aged = "Adult (>18 yrs): Male 13-17 Female 12-15"  # an age before the labels must not flip the layout
+    assert parse_range(aged, "male") == (13, 17) and parse_range(aged, "female") == (12, 15)
+    lab = {"test_name": "Haemoglobin", "value": "12.5", "unit": "g/dL", "ref_range": t}
+    assert normalize_lab(lab, "female")["interpretation"] == "N" and normalize_lab(lab, "male")["interpretation"] == "L"
+
+
 def test_formulary():
     assert formulary.match("Dolo-650 Tab")["salts"] == "Paracetamol"
     assert formulary.match("Pantop40")["brand"] == "Pantop 40"

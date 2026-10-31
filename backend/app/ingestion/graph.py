@@ -2,20 +2,24 @@ import base64
 import logging
 import mimetypes
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 from langchain_core.messages import HumanMessage
+from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..db import SessionLocal
-from ..models import Allergy, Condition, Document, Medication, Observation
+from ..models import Allergy, Condition, Document, Medication, Observation, Profile
 from .llm import structured
-from .normalize import normalize
+from .normalize import normalize, normalize_record, person
 from .prepare import prepare
 from .prompts import EXTRACT_PROMPT
 from .schemas import DocumentExtraction
 from .summarize import summarize
 
 log = logging.getLogger(__name__)
+# own threads, so slow model calls can't take the request thread pool; also caps parallel LLM calls
+INGEST = ThreadPoolExecutor(4, thread_name_prefix="ingest")
 
 
 def _image_block(path: str) -> dict:
@@ -42,8 +46,7 @@ def persist(state):
             setattr(doc, k, rec[k])
         doc.extraction = {**state["extraction"], "_warnings": state["warnings"]}
         ids = {"profile_id": pid, "document_id": did}
-        for o in rec["observations"]:
-            db.add(Observation(**ids, **{k: v for k, v in o.items() if k != "explainer"}))
+        db.add_all(_observations(rec, ids))
         for m in rec["medications"]:
             db.add(Medication(**ids, **{k: v for k, v in m.items() if k != "as_needed"}))
         db.add_all(Condition(**ids, **c) for c in rec["conditions"])
@@ -51,6 +54,28 @@ def persist(state):
         doc.status = "summarizing"  # results are visible now; the summary follows
         db.commit()
     return {}
+
+
+def _observations(rec: dict, ids: dict) -> list[Observation]:
+    return [Observation(**ids, **{k: v for k, v in o.items() if k != "explainer"}) for o in rec["observations"]]
+
+
+def reflag(db: Session, p: Profile) -> list[dict]:
+    """Profile details changed: recompute every upload's flags and warnings from its saved extraction (no LLM).
+    Returns summarize() states for the documents whose flags moved; the caller commits and runs them."""
+    who, redo = person(p), []
+    for doc in p.documents:
+        if doc.source != "upload" or doc.status != "done" or not doc.extraction:
+            continue
+        record, warnings = normalize_record(doc.extraction, *who)
+        ids = {"profile_id": p.id, "document_id": doc.id}
+        old = [o.interpretation for o in sorted(doc.observations, key=lambda o: o.id)]
+        doc.observations[:] = _observations(record, ids)  # delete-orphan removes the old rows
+        doc.extraction = {**doc.extraction, "_warnings": warnings}
+        if [o["interpretation"] for o in record["observations"]] != old:
+            doc.status = "summarizing"  # the old summary explains the old flags
+            redo.append({"record": record, **ids})
+    return redo
 
 
 def _extract_retrying(state):
@@ -88,3 +113,20 @@ def run_ingest(document_id: int, profile_id: int):
             doc = db.get(Document, document_id)
             doc.status, doc.extraction = "failed", {"_error": str(e), "_busy": _busy(e)}
             db.commit()
+        return
+    try:  # outside the try above: the document itself is fine even if this fails
+        _catch_up(state)
+    except Exception:
+        log.exception("re-check after changed profile details failed")
+
+
+def _catch_up(state):
+    """Details saved while this document was being read: PUT /profile skipped it (not 'done' yet), so re-check now."""
+    with SessionLocal() as db:
+        p = db.get(Profile, state["profile_id"])
+        if not p or person(p) == state["who"]:
+            return
+        redo = reflag(db, p)
+        db.commit()
+    for s in redo:
+        summarize(s)

@@ -6,6 +6,8 @@ from difflib import SequenceMatcher
 from ..rules import dosage, formulary, lab_catalog as labs
 
 NUM = r"-?\d+(?:\.\d+)?"
+RANGE = rf"({NUM})\s*(?:-|–|to)\s*({NUM})"
+SEX_LABEL = re.compile(r"\b(female|male|women|men|f|m)\b", re.I)
 TITLES = re.compile(r"\b(mr|mrs|ms|miss|dr|smt|shri|shrimati|master|baby)\b\.?", re.I)
 
 
@@ -36,12 +38,29 @@ def parse_num(s: str) -> float | None:
     return float(s) if re.fullmatch(NUM, s) else None
 
 
-def parse_range(text: str | None) -> tuple[float | None, float | None]:
-    """'12.0 - 15.0' -> (12, 15); '< 200' -> (None, 200); '> 40' -> (40, None)."""
+def parse_range(text: str | None, sex: str | None = None) -> tuple[float | None, float | None]:
+    """'12.0 - 15.0' -> (12, 15); '< 200' -> (None, 200); '> 40' -> (40, None).
+    'Male: 13-17 Female: 12-15' or '13-17 (Male), 12-15 (Female)' -> the part for `sex`;
+    (None, None) if sex is unknown, so the catalog decides."""
     if not text:
         return None, None
     t = text.replace(",", "")
-    if m := re.search(rf"({NUM})\s*(?:-|–|to)\s*({NUM})", t):
+    labels = list(SEX_LABEL.finditer(t))
+    if not labels:
+        return _range(t)
+    # "Male: 13-17" vs "13-17 (Male)": only a low-high range before the first label counts, not an age like ">18 yrs"
+    label_first = not re.search(RANGE, t[:labels[0].start()])
+    if sex in ("male", "female"):
+        for i, a in enumerate(labels):
+            if (a[1][0].lower() == "m") == (sex == "male"):  # m / men / male, else f / women / female
+                if label_first:  # the range sits between this label and the next
+                    return _range(t[a.end():labels[i + 1].start() if i + 1 < len(labels) else None])
+                return _range(t[labels[i - 1].end() if i else 0:a.start()])  # between the previous label and this one
+    return None, None
+
+
+def _range(t: str) -> tuple[float | None, float | None]:
+    if m := re.search(RANGE, t):
         return float(m[1]), float(m[2])
     if m := re.search(rf"(?:<=?|up\s*to|upto)\s*({NUM})", t, re.I):
         return None, float(m[1])
@@ -69,7 +88,7 @@ def normalize_lab(lab: dict, sex: str | None) -> dict:
     if factor is not None and row:
         obs["value_num"], obs["unit"] = round(num * factor, 4), row["canonical_unit"]
     # reference range: the report's own first (labs differ), then the catalog's by sex
-    lo, hi = parse_range(lab.get("ref_range"))
+    lo, hi = parse_range(lab.get("ref_range"), sex)
     from_report = lo is not None or hi is not None
     if from_report:
         f = factor if factor is not None else 1.0  # range is in the report's unit
@@ -134,14 +153,17 @@ def normalize_record(ex: dict, name: str, dob: date | None, sex: str | None,
     return record, warnings
 
 
+def person(p) -> tuple[str, date | None, str | None]:
+    """Name, dob and sex for normalize_record."""
+    # the default name is the username, which never matches a real name on a report: skip that check then
+    return "" if p.user.account and p.name == p.user.account.username else p.name, p.dob, p.sex
+
+
 def normalize(state):
     from ..db import SessionLocal
     from ..models import Profile
 
     with SessionLocal() as db:
-        p = db.get(Profile, state["profile_id"])
-        # the default name is the username, which never matches a real name on a report: skip that check then
-        name = "" if p.user.account and p.name == p.user.account.username else p.name
-        dob, sex = p.dob, p.sex
-    record, warnings = normalize_record(state["extraction"], name, dob, sex)
-    return {"record": record, "warnings": warnings}
+        who = person(db.get(Profile, state["profile_id"]))
+    record, warnings = normalize_record(state["extraction"], *who)
+    return {"record": record, "warnings": warnings, "who": who}

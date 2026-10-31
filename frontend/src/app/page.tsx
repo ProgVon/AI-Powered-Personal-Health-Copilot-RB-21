@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { api, Doc } from "@/api";
 import { useProfile } from "@/Shell";
 import Icon, { IconName } from "@/components/Icon";
+import ProfileForm from "@/components/ProfileForm";
 import RangeGauge from "@/components/RangeGauge";
 import { Badge, DOC_ICON, EmptyState, FLAG, fmtDate, SectionTitle, Skeleton, Spinner } from "@/components/ui";
 
@@ -25,8 +26,9 @@ const Block = ({ title, children, d }: { title: string; children: ReactNode; d: 
 
 export default function Home() {
   const { t, i18n } = useTranslation();
-  const { profile: p } = useProfile();
+  const { profile: p, reload } = useProfile();
   const [docs, setDocs] = useState<Doc[] | null>(null);
+  const [editing, setEditing] = useState(false);
   useEffect(() => { api.docs().then(setDocs).catch(() => setDocs([])); }, []);
 
   if (!p) return <div className="space-y-4"><Skeleton className="h-52 w-full" /><div className="grid grid-cols-2 gap-4 md:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28" />)}</div></div>;
@@ -34,6 +36,7 @@ export default function Home() {
   const greet = t(`greet.${h < 12 ? "morning" : h < 17 ? "afternoon" : "evening"}`);
   const initials = p.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   const first = docs !== null && docs.length === 0;
+  const showDetails = editing || !p.sex;  // ask until set: lab ranges depend on it; the rest is optional
 
   return (
     <div className="space-y-8">
@@ -58,10 +61,13 @@ export default function Home() {
           <div className="flex gap-3">
             <Link href="/upload" className="btn btn-primary shadow-lg"><Icon name="plus" className="h-4 w-4" strokeWidth={2.4} />{t("nav.upload")}</Link>
             <Link href="/timeline" className="btn btn-ghost">{t("nav.timeline")}</Link>
+            {!showDetails && <button className="btn btn-ghost" onClick={() => setEditing(true)}><Icon name="user" className="h-4 w-4" />{t("details.edit")}</button>}
           </div>
         </div>
         <p className="relative mt-5 max-w-md text-sm text-muted">{t("heroSub")}</p>
       </section>
+
+      {showDetails && <Block d={0} title={t("details.title")}><ProfileForm p={p} onSaved={() => { setEditing(false); reload(); }} /></Block>}
 
       {first && <EmptyState icon="upload" title={t("firstRunTitle")} sub={t("firstRunSub")}>
         <Link href="/upload" className="btn btn-primary mt-2"><Icon name="upload" className="h-4 w-4" />{t("nav.upload")}</Link></EmptyState>}

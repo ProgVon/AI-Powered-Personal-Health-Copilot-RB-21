@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from ..auth import current_profile
 from ..config import settings
 from ..db import get_db
-from ..ingestion.graph import run_ingest
+from ..ingestion.graph import INGEST, run_ingest
 from ..ingestion.summarize import LANGS, translate_summary
 from ..models import Document, Profile
 
@@ -50,7 +50,7 @@ async def upload(file: UploadFile, bg: BackgroundTasks, p: Profile = Depends(cur
     path.write_bytes(data)
     doc.file_path = str(path)
     db.commit()
-    bg.add_task(run_ingest, doc.id, p.id)
+    bg.add_task(INGEST.submit, run_ingest, doc.id, p.id)
     return doc_brief(doc)
 
 
@@ -72,11 +72,13 @@ def get_document(doc_id: int, p: Profile = Depends(current_profile), db: Session
 @router.post("/{doc_id}/rescan")
 def rescan(doc_id: int, bg: BackgroundTasks, p: Profile = Depends(current_profile), db: Session = Depends(get_db)):
     d = _own(db, p, doc_id)
-    if d.status != "failed" or not d.file_path:  # failures happen before persist, so no rows to clear
+    if d.status != "failed" or d.source != "upload":
         raise HTTPException(409, "Only failed uploads can be rescanned")
+    for rows in (d.observations, d.medications, d.conditions, d.allergies):  # a restart mid-summary leaves saved rows
+        rows.clear()
     d.status, d.extraction = "processing", None
     db.commit()
-    bg.add_task(run_ingest, d.id, p.id)
+    bg.add_task(INGEST.submit, run_ingest, d.id, p.id)
     return doc_brief(d)
 
 

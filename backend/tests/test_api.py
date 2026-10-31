@@ -2,16 +2,20 @@
 import io
 import time
 import uuid
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 from fhir.resources.R4B.bundle import Bundle
 from PIL import Image
+from sqlalchemy import func, select
 
 from app import auth
+from app.config import settings
 from app.ingestion import graph, summarize
 from app.ingestion.normalize import normalize_record
 from app.ingestion.schemas import DocumentExtraction, Summary
-from app.main import app
+from app.main import app, lifespan
+from app.models import Allergy, Condition, Document, Medication, Observation
 from app.routers import documents
 
 EXTRACTION = DocumentExtraction.model_validate({
@@ -143,8 +147,13 @@ def test_full_flow(monkeypatch):
         assert any(i["source"] == "abdm" for i in c.get("/profile/timeline").json())
 
         Bundle.model_validate(c.get("/profile/fhir").json())
+        pid = summarize.SessionLocal().get(summarize.Document, d["id"]).profile_id
         assert c.delete("/profile").status_code == 204
-        assert c.get("/documents").status_code == 401  # account and data gone
+        assert c.get("/documents").status_code == 401  # account gone
+        assert not (Path(settings.STORAGE_DIR) / str(d["id"])).exists()  # uploaded scan gone
+        with summarize.SessionLocal() as db:  # and every clinical row
+            for m in (Document, Observation, Medication, Condition, Allergy):
+                assert not db.scalar(select(func.count()).select_from(m).where(m.profile_id == pid))
 
 
 def test_newer_normal_result_clears_old_abnormal(monkeypatch):
@@ -270,7 +279,6 @@ def test_failed_email_keeps_no_account(monkeypatch):
 def test_send_mail_uses_brevo_when_keyed(monkeypatch):
     import json
     import urllib.request
-    from app.config import settings
     sent = {}
 
     class Resp:
@@ -302,4 +310,96 @@ def test_busy_failure_can_be_rescanned(monkeypatch):
         assert c.post(f"/documents/{did}/rescan").status_code == 200
         assert c.get(f"/documents/{did}").json()["status"] == "done"
         assert c.post(f"/documents/{did}/rescan").status_code == 409  # only failed docs
+        c.delete("/profile")
+
+
+def test_restart_mid_summary_can_be_rescanned_without_duplicates(monkeypatch):
+    import asyncio
+    monkeypatch.setattr(graph, "structured", lambda *a: FakeLLM(EXTRACTION))
+    monkeypatch.setattr(summarize, "structured", lambda *a: FakeLLM(SUMMARY))
+    with TestClient(app, headers=_visit()) as c:
+        did = c.post("/documents", files={"file": ("a.png", _png(), "image/png")}).json()["id"]
+        with summarize.SessionLocal() as db:  # as if the server died after persist, before the summary
+            doc = db.get(Document, did)
+            doc.status, doc.summary = "summarizing", None
+            db.commit()
+
+        async def restart():
+            async with lifespan(app):
+                pass
+        asyncio.run(restart())
+        d = c.get(f"/documents/{did}").json()
+        assert d["status"] == "failed" and d["extraction"]["_busy"] is True  # page shows Rescan
+        assert c.post(f"/documents/{did}/rescan").status_code == 200
+        d = c.get(f"/documents/{did}").json()
+        assert d["status"] == "done" and d["summary"] and len(d["observations"]) == 2  # old rows replaced, not doubled
+        c.delete("/profile")
+
+
+def test_profile_details_are_validated_and_used(monkeypatch):
+    lab = EXTRACTION.model_copy(update={"lab_results": [EXTRACTION.lab_results[0].model_copy(
+        update={"value": "12.5", "ref_range": "Male: 13.0-17.0 Female: 12.0-15.0"})]})
+    monkeypatch.setattr(graph, "structured", lambda *a: FakeLLM(lab))
+    monkeypatch.setattr(summarize, "structured", lambda *a: FakeLLM(SUMMARY))
+    with TestClient(app, headers=_visit()) as c:
+        assert c.put("/profile", json={"sex": "F"}).status_code == 422
+        assert c.put("/profile", json={"preferred_language": "fr"}).status_code == 422
+        assert c.put("/profile", json={"dob": "2999-01-01"}).status_code == 422
+        assert c.put("/profile", json={"name": ""}).status_code == 422
+        p = c.put("/profile", json={"name": "Ravi Kumar", "dob": "1990-01-01", "sex": "male"}).json()
+        assert (p["name"], p["sex"], p["dob"]) == ("Ravi Kumar", "male", "1990-01-01")
+        d = c.get(f"/documents/{c.post('/documents', files={'file': ('a.png', _png(), 'image/png')}).json()['id']}").json()
+        assert d["observations"][0]["interpretation"] == "L"  # the male range, not the first one printed
+        assert any("seems to be for Sunita Devi" in w for w in d["extraction"]["_warnings"])  # real name: check runs
+        c.delete("/profile")
+
+
+def test_huge_pdf_page_is_rendered_small(tmp_path):
+    import pymupdf
+    from app.ingestion.prepare import MAX_EDGE, prepare_file
+    pdf = pymupdf.open()
+    pdf.new_page(width=14400, height=7200)  # 200 x 100 inches, blank so it goes as an image
+    src = tmp_path / "big.pdf"
+    pdf.save(src)
+    paths, _ = prepare_file(src, "application/pdf", tmp_path)
+    assert max(Image.open(paths[0]).size) <= MAX_EDGE
+
+
+def test_saving_sex_reflags_earlier_reports(monkeypatch):
+    lab = EXTRACTION.model_copy(update={"lab_results": [EXTRACTION.lab_results[0].model_copy(
+        update={"value": "12.5", "ref_range": "Male: 13.0-17.0 Female: 12.0-15.0"})]})
+    monkeypatch.setattr(graph, "structured", lambda *a: FakeLLM(lab))
+    monkeypatch.setattr(summarize, "structured", lambda *a: FakeLLM(SUMMARY))
+    with TestClient(app, headers=_visit()) as c:
+        did = c.post("/documents", files={"file": ("a.png", _png(), "image/png")}).json()["id"]
+        hb = lambda: next(o for o in c.get(f"/documents/{did}").json()["observations"] if o["loinc_code"] == "718-7")
+        assert hb()["interpretation"] == "N"  # sex unknown: the catalog's widest range
+        prof = c.put("/profile", json={"sex": "male"}).json()
+        assert hb()["interpretation"] == "L"  # re-checked against the male range, no new upload
+        assert [a["test"] for a in prof["latest_abnormal"]] == ["Haemoglobin"]
+        d = c.get(f"/documents/{did}").json()
+        assert d["status"] == "done" and d["summary"]["abnormal_explanations"][0]["test"] == "Haemoglobin"  # rebuilt
+        c.put("/profile", json={"name": "Ravi Kumar"})  # the name check also runs on old reports
+        assert any("seems to be for Sunita Devi" in w for w in c.get(f"/documents/{did}").json()["extraction"]["_warnings"])
+        c.delete("/profile")
+
+
+def test_details_saved_mid_upload_still_apply(monkeypatch):
+    lab = EXTRACTION.model_copy(update={"lab_results": [EXTRACTION.lab_results[0].model_copy(
+        update={"value": "12.5", "ref_range": "Male: 13.0-17.0 Female: 12.0-15.0"})]})
+
+    class SavesSexMeanwhile(FakeLLM):  # the summary step runs after flags are computed: save details right then
+        def invoke(self, *_):
+            with summarize.SessionLocal() as db:
+                doc = db.scalars(select(Document).order_by(Document.id.desc())).first()
+                db.get(summarize.Profile, doc.profile_id).sex = "male"
+                db.commit()
+            return self.out
+    monkeypatch.setattr(graph, "structured", lambda *a: FakeLLM(lab))
+    monkeypatch.setattr(summarize, "structured", lambda *a: SavesSexMeanwhile(SUMMARY))
+    with TestClient(app, headers=_visit()) as c:
+        did = c.post("/documents", files={"file": ("a.png", _png(), "image/png")}).json()["id"]
+        d = c.get(f"/documents/{did}").json()
+        assert d["status"] == "done" and d["observations"][0]["interpretation"] == "L"  # male range, not the old widest
+        assert len(d["observations"]) == 1
         c.delete("/profile")

@@ -1,13 +1,16 @@
 from datetime import date
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..auth import current_profile, delete_profile_data
 from ..db import get_db
 from ..fhir.serialize import to_bundle
+from ..ingestion.graph import INGEST, reflag
+from ..ingestion.summarize import summarize
 from ..models import Allergy, Condition, Document, Medication, Observation, Profile
 
 router = APIRouter(tags=["profile"])
@@ -19,10 +22,17 @@ def _q(db: Session, p: Profile, m, *where):
 
 
 class ProfileUpdate(BaseModel):
-    name: str | None = None
+    name: str | None = Field(None, min_length=1, max_length=100)
     dob: date | None = None
-    sex: str | None = None
-    preferred_language: str | None = None
+    sex: Literal["male", "female", "other"] | None = None  # anything else would silently get the widest lab ranges
+    preferred_language: Literal["en", "hi", "te"] | None = None
+
+    @field_validator("dob")
+    @classmethod
+    def not_future(cls, v):
+        if v and v > date.today():
+            raise ValueError("Date of birth can't be in the future")
+        return v
 
 
 def _age(dob: date | None) -> int | None:
@@ -60,12 +70,17 @@ def get_profile(p: Profile = Depends(current_profile), db: Session = Depends(get
 
 @router.put("/profile")
 def put_profile(body: ProfileUpdate, p: Profile = Depends(current_profile), db: Session = Depends(get_db)):
+    changed = False
     for k in ("name", "dob", "sex"):
-        if (v := getattr(body, k)) is not None:
+        if (v := getattr(body, k)) is not None and v != getattr(p, k):
             setattr(p, k, v)
+            changed = True
     if body.preferred_language:
         p.user.preferred_language = body.preferred_language
+    redo = reflag(db, p) if changed else []  # ranges, date checks and the name warning depend on these
     db.commit()
+    for state in redo:
+        INGEST.submit(summarize, state)  # new flags need a new summary; that's a model call, so off the request
     return _profile_json(p, db)
 
 

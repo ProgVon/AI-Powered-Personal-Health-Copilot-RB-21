@@ -49,6 +49,8 @@ Health Copilot turns that pile of paper into something you can understand and ca
 - 🛡️ **Safety filter** — summaries are scanned for banned wording ("you have…", "stop taking…", "cure") and regenerated
 - 🌐 **Multilingual** UI and summaries (English / Hindi / Telugu), translated ahead of time in your chosen language
 - 📈 **Profile & timeline** — current medicines, conditions, allergies and out-of-range results at a glance
+- 🧍 **Your details** — name, date of birth and sex on the Home page pick sex-specific ranges, catch impossible dates
+  and flag reports that belong to someone else; changing them re-checks every earlier upload
 - 🔗 **ABHA linking + FHIR R4** export and import (ABDM mocked for the demo)
 - ⚡ **Fast feedback** — extracted data appears as soon as it's read; the summary follows right after
 - 🔌 **Any LLM** — Gemini out of the box; Claude or OpenAI with one `provider:model` setting and their LangChain package
@@ -114,7 +116,8 @@ serves everything and no CORS setup is needed.
 
 ### The ingestion pipeline
 
-Every upload runs through five plain Python steps in a background task:
+Every upload runs through five plain Python steps on a small pool of background threads (4 at a time,
+so slow model calls never block the API or overload the LLM provider):
 
 ```mermaid
 flowchart TD
@@ -127,6 +130,14 @@ flowchart TD
     E --> Z([✅ done])
     B -. "2nd failure" .-> X([❌ failed + reason])
 ```
+
+- **Restarts:** a document cut off by a server restart is marked failed and the page offers **Rescan**,
+  which clears any half-saved rows and reads it again.
+- **Large pages:** scanned PDF pages and photos are rendered at most 2048 px on the long edge, so one
+  oversized page can't exhaust the server's memory.
+- **Changed details:** saving a new sex, date of birth or name recomputes flags and warnings for every
+  earlier upload from its saved extraction (no LLM); documents whose flags changed get a fresh summary.
+  An upload still being read when you save is re-checked as soon as it finishes.
 
 ### What happens when you upload
 
@@ -172,7 +183,7 @@ flowchart LR
     end
     subgraph Code["📏 Code does"]
         C1["Unit conversion<br/>(mg/dL ↔ mmol/L)"]
-        C2["Reference range:<br/>report first, then catalogue by sex"]
+        C2["Reference range:<br/>report first (your sex's half if it prints both),<br/>then catalogue by sex"]
         C3["L / H / LL / HH flags<br/>+ plausibility checks"]
         C4["Brand → salt (fuzzy match)<br/>dose & duration parsing"]
         C5["Banned-phrase safety filter<br/>fixed text for critical values"]
@@ -325,6 +336,12 @@ python -m eval.make_samples  # regenerate the 6 synthetic documents + their answ
 
 ## 📝 Recent changes
 
+- **Lab ranges:** reports that print both ranges ("Male: 13-17 Female: 12-15" or "13-17 (Male), 12-15 (Female)")
+  now use your sex's range. With no sex saved, the catalogue's widest range is used instead of guessing.
+- **Your details:** a Home-page form for name, date of birth and sex (validated by the API); saving re-checks old uploads.
+- **Reliability:** restarts no longer leave documents without a summary, huge PDF pages are rendered small, and
+  ingestion runs on its own 4-thread pool.
+- **Frontend:** Next.js 16.4.3 (security patch); the original file's preview is freed when you leave a document.
 - **Email:** login codes are sent only through Brevo's HTTPS API; SMTP support is gone.
 - **Dependencies:** `requirements.txt` pins the tested versions, so a redeploy can't pull a breaking release.
 - **Frontend:** pages now live directly in Next.js App Router routes (`src/app/**/page.tsx`); the old `src/views/` folder is gone.

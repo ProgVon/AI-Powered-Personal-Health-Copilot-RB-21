@@ -21,7 +21,9 @@ def prepare_file(src: Path, mime: str, out: Path) -> tuple[list[str], str]:
                 text.append(page.get_text())  # digital PDFs carry a text layer
                 if len(text[-1].strip()) < MIN_PAGE_TEXT:  # digital pages go as text only: far fewer tokens
                     p = out / f"page{i}.jpg"
-                    page.get_pixmap(dpi=DPI).save(p, jpg_quality=85)
+                    # capped like photos: a huge page at full DPI would need gigabytes of memory
+                    z = min(DPI / 72, MAX_EDGE / max(page.rect.width, page.rect.height, 1))
+                    page.get_pixmap(matrix=fitz.Matrix(z, z)).save(p, jpg_quality=85)
                     paths.append(str(p))
     else:
         img = ImageOps.exif_transpose(Image.open(src)).convert("RGB")

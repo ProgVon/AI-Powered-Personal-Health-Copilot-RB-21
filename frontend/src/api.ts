@@ -52,6 +52,8 @@ export type Profile = {
 export const api = {
   profile: () => req<Profile>("/profile"),
   setLanguage: (preferred_language: string) => req("/profile", { method: "PUT", body: JSON.stringify({ preferred_language }) }),
+  updateProfile: (body: { name: string; dob: string | null; sex: string | null }) =>
+    req<Profile>("/profile", { method: "PUT", body: JSON.stringify(body) }),
   upload: (f: File) => { const fd = new FormData(); fd.append("file", f); return req<Doc>("/documents", { method: "POST", body: fd }); },
   docs: () => req<Doc[]>("/documents"),
   doc: (id: number) => req<Doc>(`/documents/${id}`),
