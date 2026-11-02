@@ -11,3 +11,5 @@ next-env.d.ts
 .DS_Store
 backend/eval/gold/.prepared/
 backend/eval/gold/handwritten_*
+.claude/
+skills-lock.json
