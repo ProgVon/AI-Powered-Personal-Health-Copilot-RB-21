@@ -41,8 +41,8 @@ export default function Abha() {
   });
 
   const Action = ({ icon, title, sub, onClick, name, disabled }: { icon: IconName; title: string; sub: string; onClick: () => void; name: string; disabled?: boolean }) => (
-    <button onClick={onClick} disabled={disabled || !!busy} className="card group flex items-center gap-4 p-5 text-left transition enabled:hover:-translate-y-0.5 enabled:hover:border-brand/40 disabled:opacity-50">
-      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">{busy === name ? <Spinner className="h-5 w-5" /> : <Icon name={icon} className="h-6 w-6" />}</span>
+    <button onClick={onClick} disabled={disabled || !!busy} className="card group flex items-center gap-4 p-5 text-left transition enabled:hover:border-muted/50 disabled:opacity-50">
+      <span className="grid h-10 w-10 shrink-0 place-items-center text-muted">{busy === name ? <Spinner className="h-5 w-5" /> : <Icon name={icon} className="h-6 w-6" />}</span>
       <span><span className="block font-semibold">{title}</span><span className="block text-sm text-muted">{sub}</span></span>
     </button>
   );
@@ -51,15 +51,15 @@ export default function Abha() {
     <div className="space-y-8">
       <header>
         <p className="eyebrow">{t("nav.abha")}</p>
-        <h1 className="h-display mt-1 text-3xl font-semibold">{t("abhaTitle")}</h1>
+        <h1 className="h-display mt-1 text-3xl">{t("abhaTitle")}</h1>
         <p className="mt-1 max-w-xl text-muted">{t("abhaSub")}</p>
       </header>
 
-      <div className="reveal relative overflow-hidden rounded-3xl border border-line bg-surface p-6 text-ink shadow-card md:p-8">
+      <div className="card reveal relative overflow-hidden p-6 md:p-8">
         <div className="relative flex items-start justify-between">
           <div><p className="text-xs font-semibold uppercase tracking-[.2em] text-muted">{t("yourAbha")}</p>
             <p className="h-display mt-1 text-xl font-semibold">{profile?.name}</p></div>
-          <Icon name="shield" className="h-9 w-9 text-brand" strokeWidth={1.4} />
+          <Icon name="shield" className="h-8 w-8 text-muted" strokeWidth={1.4} />
         </div>
         <p className="relative mt-8 font-mono text-2xl tracking-widest md:text-3xl">{pending || "••-••••-••••-••••"}</p>
         <div className="relative mt-5">
@@ -73,7 +73,7 @@ export default function Abha() {
       <ol className="flex items-center gap-2" aria-label="Progress">
         {STEPS.map((s, i) => (
           <li key={s} className="flex flex-1 items-center gap-2 last:flex-none">
-            <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold transition ${i < step ? "bg-ok text-white" : i === step ? "bg-brand text-on-brand" : "bg-surface-2 text-muted ring-1 ring-line"}`}
+            <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold transition ${i < step ? "bg-ok text-white" : i === step ? "bg-ink text-bg" : "bg-surface-2 text-muted ring-1 ring-line"}`}
               aria-current={i === step ? "step" : undefined}>
               {i < step ? <Icon name="check" className="h-4 w-4" strokeWidth={3} /> : i + 1}
             </span>
@@ -92,9 +92,9 @@ export default function Abha() {
 
       {step === 1 && (
         <form className="card reveal space-y-4 p-6" onSubmit={(e) => { e.preventDefault(); verify(); }}>
-          {demo && <p className="flex flex-wrap items-center gap-2 rounded-xl bg-brand-soft p-3 text-sm">
+          {demo && <p className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface-2 p-3 text-sm">
             <Badge tone="brand" icon="sparkles">{t("demoOtp")}</Badge><code className="font-mono text-base font-bold tracking-widest">{demo}</code>
-            <button type="button" className="ml-auto text-sm font-semibold text-brand-strong underline" onClick={() => setOtp(demo)}>{t("useDemo")}</button></p>}
+            <button type="button" className="ml-auto text-sm font-semibold text-brand underline" onClick={() => setOtp(demo)}>{t("useDemo")}</button></p>}
           <label className="block"><span className="mb-1.5 block text-sm font-semibold">{t("otp")}</span>
             <input className="input text-center font-mono text-xl tracking-[.5em]" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
               inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="••••••" /></label>
@@ -109,7 +109,7 @@ export default function Abha() {
         <Action icon="file" title={t("export")} sub={t("exportSub")} onClick={doExport} name="export" />
       </div>
 
-      <p className="flex gap-3 rounded-2xl border border-line bg-surface-2 p-4 text-xs text-muted"><Icon name="lightbulb" className="h-4 w-4 text-high" />{t("mockNote")}</p>
+      <p className="flex gap-3 border-t border-line pt-4 text-xs text-muted"><Icon name="lightbulb" className="h-4 w-4" />{t("mockNote")}</p>
     </div>
   );
 }

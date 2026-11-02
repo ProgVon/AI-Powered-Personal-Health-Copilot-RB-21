@@ -54,14 +54,12 @@ export default function UploadZone() {
       <div
         onDragEnter={(e) => { e.preventDefault(); setOver(true); }} onDragOver={(e) => e.preventDefault()}
         onDragLeave={() => setOver(false)} onDrop={(e) => { e.preventDefault(); setOver(false); add(e.dataTransfer.files); }}
-        className={`reveal relative overflow-hidden rounded-3xl border-2 border-dashed p-8 text-center transition md:p-12
-          ${over ? "scale-[1.01] border-brand bg-brand-soft" : "border-line bg-surface"}`}>
+        className={`reveal relative overflow-hidden rounded-xl border-2 border-dashed p-8 text-center transition md:p-12
+          ${over ? "border-brand bg-surface-2" : "border-line bg-surface"}`}>
         <div className="relative flex flex-col items-center gap-4">
-          <div className={`grid h-16 w-16 place-items-center rounded-2xl bg-brand text-on-brand shadow-lg transition ${over ? "-translate-y-1" : ""}`}>
-            <Icon name="upload" className="h-8 w-8" strokeWidth={1.8} />
-          </div>
+          <Icon name="upload" className={`h-8 w-8 transition ${over ? "text-brand" : "text-muted"}`} strokeWidth={1.6} />
           <div>
-            <p className="h-display text-2xl font-semibold">{over ? t("dropHere") : t("uploadTitle")}</p>
+            <p className="h-display text-xl">{over ? t("dropHere") : t("dropOr")}</p>
             <p className="mt-1 text-sm text-muted">{t("uploadSub")}</p>
           </div>
           <div className="flex flex-wrap justify-center gap-3">
@@ -102,10 +100,10 @@ export default function UploadZone() {
         </ul>)}
 
       <aside className="card p-5">
-        <h2 className="eyebrow mb-3 flex items-center gap-2"><Icon name="lightbulb" className="h-4 w-4 text-high" />{t("tipsTitle")}</h2>
+        <h2 className="eyebrow mb-3 flex items-center gap-2">{t("tipsTitle")}</h2>
         <ul className="grid gap-3 text-sm sm:grid-cols-3">
           {(["tip1", "tip2", "tip3"] as const).map((k, n) => (
-            <li key={k} className="flex gap-3"><span className="h-display grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-soft text-xs font-bold text-brand-strong">{n + 1}</span>{t(k)}</li>))}
+            <li key={k} className="flex gap-3"><span className="h-display grid h-6 w-6 shrink-0 place-items-center rounded-full border border-line text-xs font-semibold text-muted">{n + 1}</span>{t(k)}</li>))}
         </ul>
       </aside>
     </div>

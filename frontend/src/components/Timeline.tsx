@@ -26,12 +26,12 @@ export default function Timeline({ items }: { items: TimelineItem[] }) {
               const tone = f && i.type === "abnormal_result" ? f.tone : kind.tone;
               const title = i.type === "document" ? t(`docType.${i.title.replace(/ /g, "_")}`, { defaultValue: i.title }) : i.title;
               return (
-                <li key={k} className="reveal relative" style={{ ["--d" as string]: Math.min(n++, 8) }}>
+                <li key={k} className="reveal relative">
                   <span className="absolute -left-12 top-3 grid h-10 w-10 place-items-center rounded-full border-4 border-bg"
                     style={{ background: tone === "muted" ? "var(--line)" : `var(--${tone}-soft)`, color: tone === "muted" ? "var(--muted)" : `var(--${tone})` }}>
                     <Icon name={kind.icon} className="h-4 w-4" />
                   </span>
-                  <Link href={`/documents/${i.document_id}`} className="card group flex items-center gap-3 p-4 transition hover:-translate-y-0.5 hover:border-brand/40">
+                  <Link href={`/documents/${i.document_id}`} className="card group flex items-center gap-3 p-4 transition hover:border-muted/50">
                     <div className="min-w-0 flex-1">
                       <p className="eyebrow">{t(`tl.${i.type}`)}</p>
                       <p className="mt-0.5 truncate font-semibold">{title}</p>
@@ -42,7 +42,7 @@ export default function Timeline({ items }: { items: TimelineItem[] }) {
                       </div>
                     </div>
                     <time className="shrink-0 text-xs text-muted" dateTime={i.date}>{fmtDate(i.date, i18n.language)}</time>
-                    <Icon name="chevron" className="h-4 w-4 text-muted transition group-hover:translate-x-0.5 group-hover:text-brand" />
+                    <Icon name="chevron" className="h-4 w-4 text-muted transition group-hover:translate-x-0.5 group-hover:text-ink" />
                   </Link>
                 </li>);
             })}

@@ -1,5 +1,5 @@
 "use client";
-import { InputHTMLAttributes, useState } from "react";
+import { InputHTMLAttributes, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, setToken } from "@/api";
 import { useToast } from "./Toast";
@@ -7,6 +7,8 @@ import { Segmented, Spinner } from "./ui";
 
 type Mode = "signup" | "login" | "forgot";
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const RESEND = 30;  // seconds, matches RESEND_AFTER in backend/app/routers/auth.py
+const seen = () => { try { return !!localStorage.getItem("returning"); } catch { return false; } };
 
 export default function Login({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation();
@@ -14,7 +16,7 @@ export default function Login({ onDone }: { onDone: () => void }) {
   const [kicked] = useState(() => {  // sent here by a 401, e.g. the password was reset on another device
     try { const v = sessionStorage.getItem("loggedOut"); sessionStorage.removeItem("loggedOut"); return !!v; } catch { return false; }
   });
-  const [mode, setMode] = useState<Mode>(kicked ? "login" : "signup");
+  const [mode, setMode] = useState<Mode>(() => (kicked || seen() ? "login" : "signup"));
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,10 +24,18 @@ export default function Login({ onDone }: { onDone: () => void }) {
   const [otp, setOtp] = useState("");
   const [otpOk, setOtpOk] = useState(false);  // forgot flow: code confirmed, now ask for the new password
   const [busy, setBusy] = useState(false);
+  const [slow, setSlow] = useState(false);  // a free-tier server can take a minute to wake up
+  const [wait, setWait] = useState(0);  // seconds until a new code can be requested
+  useEffect(() => {
+    if (wait <= 0) return;
+    const id = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(id);
+  }, [wait]);
 
   async function run(f: () => Promise<void>) {
     setBusy(true);
-    try { await f(); } catch (e) { toast((e as Error).message, true); } finally { setBusy(false); }
+    const timer = setTimeout(() => setSlow(true), 4000);
+    try { await f(); } catch (e) { toast((e as Error).message, true); } finally { clearTimeout(timer); setSlow(false); setBusy(false); }
   }
   const switchMode = (m: Mode) => { setMode(m); setPassword(""); setSentTo(""); setOtp(""); setOtpOk(false); };
   const send = () => run(async () => {
@@ -37,11 +47,18 @@ export default function Login({ onDone }: { onDone: () => void }) {
     const r = mode === "signup" ? await api.signup(username.trim(), email.trim(), password)
       : mode === "login" ? await api.login(username.trim(), password) : await api.forgot(email.trim());
     setSentTo(r.email);
+    setWait(RESEND);
     toast(t(mode === "forgot" ? "auth.resetSent" : "auth.otpSent", { email: r.email }));
+  });
+  const resend = () => run(async () => {  // the signup already created the account, so a new code comes from /login
+    if (mode === "forgot") await api.forgot(sentTo); else await api.login(username.trim(), password);
+    setWait(RESEND);
+    toast(t("auth.otpSent", { email: sentTo }));
   });
   const verify = () => run(async () => {
     if (mode === "forgot") { await api.checkReset(sentTo, otp); setPassword(""); setOtpOk(true); return; }
     setToken((await api.verifyOtp(sentTo, otp)).token);
+    try { localStorage.setItem("returning", "1"); } catch { /* private mode */ }
     onDone();
   });
   const reset = () => run(async () => {
@@ -60,13 +77,12 @@ export default function Login({ onDone }: { onDone: () => void }) {
   const title = otpOk ? "auth.newPasswordTitle" : sentTo ? "auth.checkEmail" : `auth.${mode}Title`;
 
   return (
-    <div className="card reveal mx-auto w-full max-w-md space-y-5 p-6">
+    <div className="card reveal w-full space-y-5 p-6 md:p-8">
       <div>
         <h1 className="h-display text-2xl font-semibold">{t(title)}</h1>
-        <p className="mt-1 text-sm text-muted">
-          {otpOk ? t("auth.passwordHint") : sentTo ? t(mode === "forgot" ? "auth.resetSent" : "auth.otpSent", { email: sentTo })
-            : mode === "forgot" ? t("auth.forgotSub") : t("tagline")}
-        </p>
+        {(otpOk || sentTo || mode === "forgot") && <p className="mt-1 text-sm text-muted">
+          {otpOk ? t("auth.passwordHint") : sentTo ? t(mode === "forgot" ? "auth.resetSent" : "auth.otpSent", { email: sentTo }) : t("auth.forgotSub")}
+        </p>}
       </div>
 
       {otpOk ? (
@@ -79,19 +95,22 @@ export default function Login({ onDone }: { onDone: () => void }) {
           <label className="block"><span className="mb-1.5 block text-sm font-semibold">{t("otp")}</span>
             <input className="input text-center font-mono text-xl tracking-[.5em]" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
               inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="••••••" autoFocus /></label>
-          <div className="flex flex-wrap gap-3">
-            <button className="btn btn-primary" disabled={otp.length !== 6 || busy}>{busy && <Spinner />}{t("verify")}</button>
-            <button type="button" className="btn btn-ghost" onClick={() => { setSentTo(""); setOtp(""); }} disabled={busy}>{t("auth.back")}</button>
+          <button className="btn btn-primary w-full" disabled={otp.length !== 6 || busy}>{busy && <Spinner />}{t("verify")}</button>
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+            <button type="button" className="font-semibold text-brand underline-offset-4 hover:underline disabled:text-muted disabled:no-underline"
+              onClick={resend} disabled={busy || wait > 0}>{wait > 0 ? t("auth.resendIn", { n: wait }) : t("auth.resend")}</button>
+            <button type="button" className="font-semibold text-muted underline-offset-4 hover:text-ink hover:underline" onClick={() => { setSentTo(""); setOtp(""); }} disabled={busy}>
+              {mode === "forgot" ? t("auth.back") : t("auth.different")}</button>
           </div>
         </form>
       ) : mode === "forgot" ? (
         <form className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); send(); }}>
           {field(t("auth.email"), email, setEmail, { type: "email", autoComplete: "email", autoFocus: true })}
-          <button className="btn btn-primary w-full" disabled={busy}>{busy && <Spinner />}{t("sendOtp")}</button>
-          <button type="button" className="block text-sm font-semibold text-brand-strong underline" onClick={() => switchMode("login")}>{t("auth.backToLogin")}</button>
+          <button className="btn btn-primary w-full" disabled={busy}>{busy && <Spinner />}{t("auth.sendCode")}</button>
+          <button type="button" className="block text-sm font-semibold text-brand underline-offset-4 hover:underline" onClick={() => switchMode("login")}>{t("auth.backToLogin")}</button>
         </form>
       ) : (<>
-        {kicked && mode === "login" && <p role="status" className="rounded-xl bg-brand-soft p-3 text-sm">{t("auth.loggedOut")}</p>}
+        {kicked && mode === "login" && <p role="status" className="rounded-lg border border-line bg-surface-2 p-3 text-sm">{t("auth.loggedOut")}</p>}
         <Segmented label={t("auth.mode")} value={mode} onChange={switchMode}
           options={[{ value: "signup", label: t("auth.signup") }, { value: "login", label: t("auth.login") }]} />
         <form className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); send(); }}>
@@ -102,11 +121,12 @@ export default function Login({ onDone }: { onDone: () => void }) {
           </>) : (<>
             {field(t("auth.usernameOrEmail"), username, setUsername, { autoComplete: "username" })}
             {field(t("auth.password"), password, setPassword, { type: "password", autoComplete: "current-password" })}
-            <button type="button" className="text-sm font-semibold text-brand-strong underline" onClick={() => switchMode("forgot")}>{t("auth.forgot")}</button>
+            <button type="button" className="text-sm font-semibold text-brand underline-offset-4 hover:underline" onClick={() => switchMode("forgot")}>{t("auth.forgot")}</button>
           </>)}
-          <button className="btn btn-primary w-full" disabled={busy}>{busy && <Spinner />}{t("sendOtp")}</button>
+          <button className="btn btn-primary w-full" disabled={busy}>{busy && <Spinner />}{t("auth.continue")}</button>
         </form>
       </>)}
+      {slow && <p role="status" className="flex items-center gap-2 rounded-lg bg-surface-2 p-3 text-sm text-muted"><Spinner />{t("auth.slow")}</p>}
     </div>
   );
 }

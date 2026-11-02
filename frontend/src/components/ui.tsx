@@ -40,10 +40,10 @@ export const Spinner = ({ className = "h-4 w-4" }: { className?: string }) => (
 export function Segmented<T extends string>({ options, value, onChange, label }:
   { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void; label: string }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex rounded-xl border border-line bg-surface-2 p-0.5">
+    <div role="group" aria-label={label} className="inline-flex rounded-lg border border-line bg-surface-2 p-0.5">
       {options.map((o) => (
         <button key={o.value} aria-pressed={o.value === value} onClick={() => onChange(o.value)}
-          className={`min-h-9 rounded-[10px] px-3 text-xs font-semibold transition ${o.value === value ? "bg-surface text-brand-strong shadow-sm" : "text-muted hover:text-ink"}`}>
+          className={`min-h-9 rounded-md px-3 text-xs font-semibold transition ${o.value === value ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`}>
           {o.label}
         </button>
       ))}
@@ -54,13 +54,8 @@ export function Segmented<T extends string>({ options, value, onChange, label }:
 export function EmptyState({ icon, title, sub, children }: { icon: IconName; title: string; sub?: string; children?: ReactNode }) {
   return (
     <div className="card reveal flex flex-col items-center gap-3 px-6 py-12 text-center">
-      <div className="relative grid h-20 w-20 place-items-center">
-        <span className="absolute inset-0 rounded-full bg-brand-soft" />
-        <span className="absolute -right-1 top-1 h-4 w-4 rounded-full bg-med-soft" />
-        <span className="absolute -left-2 bottom-2 h-3 w-3 rounded-full bg-high-soft" />
-        <Icon name={icon} className="relative h-9 w-9 text-brand" strokeWidth={1.6} />
-      </div>
-      <h2 className="h-display text-xl font-semibold">{title}</h2>
+      <Icon name={icon} className="h-8 w-8 text-muted" strokeWidth={1.6} />
+      <h2 className="h-display text-xl">{title}</h2>
       {sub && <p className="max-w-sm text-sm text-muted">{sub}</p>}
       {children}
     </div>
@@ -70,7 +65,7 @@ export function EmptyState({ icon, title, sub, children }: { icon: IconName; tit
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="mb-3 flex items-end justify-between gap-3">
-      <h2 className="h-display text-xl font-semibold">{children}</h2>{action}
+      <h2 className="h-display text-xl">{children}</h2>{action}
     </div>
   );
 }

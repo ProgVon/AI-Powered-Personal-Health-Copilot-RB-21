@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { api, Doc, Summary } from "@/api";
 import AbnormalCard from "@/components/AbnormalCard";
@@ -17,11 +17,11 @@ function Processing() {
   useEffect(() => { const i = setInterval(() => setStep((s) => Math.min(s + 1, 2)), 4000); return () => clearInterval(i); }, []);
   return (
     <div className="card reveal mx-auto max-w-lg space-y-5 p-8 text-center">
-      <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-brand-soft text-brand"><Spinner className="h-7 w-7" /></div>
-      <h1 className="h-display text-2xl font-semibold">{t("processing.title")}</h1>
+      <Spinner className="mx-auto h-7 w-7 text-muted" />
+      <h1 className="h-display text-2xl">{t("processing.title")}</h1>
       <ol className="space-y-2 text-left text-sm">
         {(["s1", "s2", "s3"] as const).map((k, i) => (
-          <li key={k} className={`flex items-center gap-3 rounded-xl px-3 py-2 transition ${i === step ? "bg-brand-soft font-semibold text-brand-strong" : i < step ? "text-muted" : "text-muted/60"}`}>
+          <li key={k} className={`flex items-center gap-3 rounded-xl px-3 py-2 transition ${i === step ? "bg-surface-2 font-semibold text-ink" : i < step ? "text-muted" : "text-muted/60"}`}>
             <span className="grid h-5 w-5 place-items-center">{i < step ? <Icon name="check" className="h-4 w-4 text-ok" strokeWidth={2.6} /> : i === step ? <Spinner /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}</span>
             {t(`processing.${k}`)}
           </li>))}
@@ -34,6 +34,7 @@ function Processing() {
 export default function DocumentDetail() {
   const id = Number(useParams<{ id: string }>().id);
   const { t, i18n } = useTranslation();
+  const router = useRouter();
   const [doc, setDoc] = useState<Doc | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [busy, setBusy] = useState(false);
@@ -68,16 +69,23 @@ export default function DocumentDetail() {
   const warnings = doc.extraction?._warnings ?? [];
   const obs = doc.observations ?? [], meds = doc.medications ?? [];
   const hasData = obs.length || meds.length || doc.conditions?.length || doc.allergies?.length;
-  const tabs = [{ value: "summary" as Tab, label: t("tab.summary") }, { value: "data" as Tab, label: t("tab.data") },
+  const noSummary = !doc.summary && doc.status !== "summarizing";  // e.g. ABDM imports: open straight on the data
+  const view: Tab = noSummary && tab === "summary" ? "data" : tab;
+  const tabs = [...(noSummary ? [] : [{ value: "summary" as Tab, label: t("tab.summary") }]), { value: "data" as Tab, label: t("tab.data") },
     ...(file ? [{ value: "original" as Tab, label: t("tab.original") }] : [])];
 
   return (
     <div className="space-y-6">
+      {/* came from inside the app: go back there; opened from a link: go home */}
+      <button className="no-print -ml-1 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"
+        onClick={() => (history.length > 1 ? router.back() : router.push("/"))}>
+        <Icon name="chevron" className="h-4 w-4 rotate-180" />{t("back")}
+      </button>
       <header className="reveal flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand"><Icon name={DOC_ICON[kind] ?? "file"} className="h-7 w-7" /></span>
+          <Icon name={DOC_ICON[kind] ?? "file"} className="h-7 w-7 text-muted" strokeWidth={1.6} />
           <div>
-            <h1 className="h-display text-3xl font-semibold">{t(`docType.${kind}`)}</h1>
+            <h1 className="h-display text-3xl">{t(`docType.${kind}`)}</h1>
             <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
               {doc.doc_date && <span className="inline-flex items-center gap-1.5"><Icon name="calendar" className="h-4 w-4" />{fmtDate(doc.doc_date, i18n.language, "long")}</span>}
               {doc.facility && <span className="inline-flex items-center gap-1.5"><Icon name="building" className="h-4 w-4" />{doc.facility}</span>}
@@ -90,26 +98,25 @@ export default function DocumentDetail() {
       </header>
 
       {warnings.length > 0 && (
-        <div role="alert" className="reveal flex gap-3 rounded-2xl border border-high/40 bg-high-soft p-4 text-sm text-ink">
+        <div role="alert" className="reveal flex gap-3 rounded-xl border border-high/40 bg-high-soft p-4 text-sm text-ink">
           <Icon name="alert" className="mt-0.5 h-5 w-5 text-high" />
           <div><p className="font-semibold">{t("warnings")}</p><ul className="mt-1 list-disc pl-5">{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul></div>
         </div>)}
 
       <div className="no-print flex items-center gap-3">
-        <Segmented label="View" value={tab} onChange={setTab} options={tabs} />
+        {tabs.length > 1 && <Segmented label="View" value={view} onChange={setTab} options={tabs} />}
         {busy && <span className="flex items-center gap-2 text-sm text-muted"><Spinner />{t("translating")}</span>}
       </div>
 
       {/* summary and data both render; the inactive one is hidden on screen but still printed */}
-      <div className={tab === "summary" ? "" : "hidden print:block"}>
-        {summary
-          ? <SummaryCard s={summary} observations={obs} />
-          : doc.status === "summarizing"
-            ? <div className="card flex items-center gap-3 p-6 text-muted"><Spinner />{t("processing.s3")}</div>
-            : <EmptyState icon="file" title={t("noSummary")} />}
-      </div>
+      {!noSummary && (
+        <div className={view === "summary" ? "" : "hidden print:block"}>
+          {summary
+            ? <SummaryCard s={summary} observations={obs} />
+            : <div className="card flex items-center gap-3 p-6 text-muted"><Spinner />{t(doc.status === "summarizing" ? "processing.s3" : "translating")}</div>}
+        </div>)}
 
-      <div className={tab === "data" ? "" : "hidden print:block"}>
+      <div className={view === "data" ? "" : "hidden print:block"}>
         <div className="space-y-8 print:mt-8">
           {!hasData && <EmptyState icon="file" title={t("noData")} />}
           {obs.length > 0 && (
@@ -117,7 +124,7 @@ export default function DocumentDetail() {
               <SectionTitle>{t("labResults")}</SectionTitle>
               <div className="grid gap-4 lg:grid-cols-2">
                 {obs.map((o, i) => (
-                  <div key={o.id} className="reveal" style={{ ["--d" as string]: Math.min(i, 8) }}>
+                  <div key={o.id} className="reveal">
                     <AbnormalCard name={o.display_name} flag={o.interpretation} obs={o}
                       value={[o.value_num ?? o.value_text, o.unit].filter((x) => x != null && x !== "").join(" ")}>
                       {o.note ? <p className="flex gap-2 text-high"><Icon name="alert" className="mt-0.5 h-4 w-4" />{o.note}</p> : null}
@@ -152,7 +159,7 @@ export default function DocumentDetail() {
         </div>
       </div>
 
-      {tab === "original" && file && (
+      {view === "original" && file && (
         <div className="card overflow-hidden">
           {file.type.startsWith("image/")
             ? <img src={file.url} alt={t("tab.original")} className="mx-auto max-h-[80vh] w-auto" />

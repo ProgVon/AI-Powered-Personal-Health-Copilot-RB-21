@@ -1,10 +1,10 @@
 import { execSync } from "node:child_process";
 import type { NextConfig } from "next";
 
-// Latest pushed commits for the companion's "What's new"; read once at build/dev start, empty if git is missing.
+// Latest pushed commits for the sidebar's "What's new"; read once at build/dev start, empty if git is missing.
 function updates() {
   try {
-    return execSync("git log -5 --format=%h%x1f%cI%x1f%s", { encoding: "utf8" }).trim().split("\n")
+    return execSync("git log -5 --no-merges --format=%h%x1f%cI%x1f%s", { encoding: "utf8" }).trim().split("\n")
       .map((l) => { const [hash, date, msg] = l.split("\x1f"); return { hash, date, msg }; });
   } catch { return []; }
 }
