@@ -336,6 +336,11 @@ python -m eval.make_samples  # regenerate the 6 synthetic documents + their answ
 
 ## 📝 Recent changes
 
+- **Home dashboard:** restyled to match the login page. The green banner is replaced by a pile of your latest reports
+  with the first out-of-range value marked (a scan line runs over it while a document is being read). Sections fade in
+  one after another, range markers slide out of the normal band to the value, and today's medicines are grouped by
+  time of day with "Now" marked. First-time users see the login demo beside the setup checklist. Reduced-motion
+  settings skip all of it.
 - **Lab ranges:** reports that print both ranges ("Male: 13-17 Female: 12-15" or "13-17 (Male), 12-15 (Female)")
   now use your sex's range. With no sex saved, the catalogue's widest range is used instead of guessing.
 - **Your details:** a Home-page form for name, date of birth and sex (validated by the API); saving re-checks old uploads.

@@ -7,7 +7,8 @@ import { useProfile } from "@/Shell";
 import Icon, { IconName } from "@/components/Icon";
 import ProfileForm from "@/components/ProfileForm";
 import RangeGauge from "@/components/RangeGauge";
-import { Badge, DOC_ICON, FLAG, fmtDate, SectionTitle, Skeleton, Spinner } from "@/components/ui";
+import ReportDemo from "@/components/ReportDemo";
+import { Badge, DOC_ICON, FLAG, fmtDate, parseDose, SectionTitle, Sheet, Skeleton, Spinner } from "@/components/ui";
 
 const Chips = ({ items, tone, icon }: { items: string[]; tone: "dx" | "high"; icon: IconName }) => (
   <div className="flex flex-wrap gap-2">{items.map((c) => <Badge key={c} tone={tone} icon={icon}>{c}</Badge>)}</div>
@@ -15,6 +16,66 @@ const Chips = ({ items, tone, icon }: { items: string[]; tone: "dx" | "high"; ic
 const Block = ({ title, children }: { title: string; children: ReactNode }) => (
   <section className="card p-5"><h2 className="eyebrow mb-3">{title}</h2>{children}</section>
 );
+
+// The day's doses in columns, the current part of the day marked. Doses written any other way are listed as written.
+function Schedule({ meds }: { meds: Profile["current_medicines"] }) {
+  const { t } = useTranslation();
+  const parsed = meds.map((m) => ({ m, d: m.dose_pattern ? parseDose(m.dose_pattern) : null }));
+  const cols = ["morning", "afternoon", "evening", "night"].filter((s) => s !== "evening" || parsed.some((x) => x.d?.slots.includes(s)));
+  const h = new Date().getHours();
+  const now = h < 12 ? "morning" : h < 17 ? "afternoon" : h < 20 && cols.includes("evening") ? "evening" : "night";
+  const other = parsed.filter((x) => !x.d);
+  return (
+    <div className="card overflow-hidden">
+      <div className={`grid divide-y divide-line sm:divide-x sm:divide-y-0 ${cols.length === 4 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+        {cols.map((s) => {
+          const due = parsed.flatMap(({ m, d }) => { const i = d?.slots.indexOf(s) ?? -1; return i >= 0 && d!.on[i] ? [{ m, n: d!.doses[i], rest: d!.rest }] : []; });
+          return (
+            <section key={s} aria-current={s === now ? "time" : undefined} className={`p-4 ${s === now ? "bg-brand-soft/60" : ""}`}>
+              <h3 className="flex min-h-6 items-center justify-between gap-2 text-sm font-semibold">{t(`dose.${s}`)}{s === now && <Badge tone="brand"><i className="live" />{t("now")}</Badge>}</h3>
+              <ul className="-mx-1.5 mt-2 space-y-1">
+                {due.length ? due.map(({ m, n, rest }, i) => (
+                  <li key={i}><Link href={`/documents/${m.document_id}`} className="flex gap-2.5 rounded-lg p-1.5 transition hover:bg-surface-2">
+                    <Icon name="pill" className="mt-0.5 h-4 w-4 text-med" />
+                    <span className="min-w-0"><span className="block font-medium leading-snug">{m.name}{n !== "1" && <span className="text-muted"> ×{n}</span>}</span>
+                      {rest && <span className="block text-xs text-muted">{rest}</span>}</span>
+                  </Link></li>))
+                  : <li className="p-1.5 text-sm text-muted" aria-label={t("none")}>—</li>}
+              </ul>
+            </section>);
+        })}
+      </div>
+      {other.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line p-4 text-sm">
+          <span className="font-semibold">{t("asPrescribed")}</span>
+          {other.map(({ m }, i) => <Link key={i} href={`/documents/${m.document_id}`} className="flex items-center gap-2 hover:underline">
+            {m.name}{m.dose_pattern && <Badge tone="med">{m.dose_pattern}</Badge>}</Link>)}
+        </div>)}
+    </div>
+  );
+}
+
+// The latest reports as a pile of paper, like the login demo. The top sheet marks the first value
+// that needs attention; while a document is being read, a scan line passes over it.
+function Pile({ docs, hit }: { docs: Doc[]; hit?: Profile["latest_abnormal"][number] }) {
+  const { t } = useTranslation();
+  return (
+    <div aria-hidden className="relative h-[6.3rem] w-32 shrink-0 sm:h-40 sm:w-52">
+      <div className="pile absolute right-0 top-0 h-40 w-52 origin-top-right max-sm:scale-[.615]">
+        {docs.length > 2 && <div className="paper" style={{ rotate: "6deg" }} />}
+        {docs.length > 1 && <div className="paper" style={{ rotate: "-5deg" }} />}
+        <div className={`paper ${docs.some((d) => d.status === "processing") ? "scan" : ""}`} style={{ rotate: "-1.5deg" }}>
+          <div className="flex items-center justify-between"><i className="rd-bar w-14" /><i className="rd-bar w-8" /></div>
+          <p className="mb-1.5 mt-2.5 truncate text-[11px] font-bold">{t(`docType.${docs[0].doc_type ?? "other"}`)}</p>
+          {hit && <div className="rd-row rd-hit"><span className="truncate">{hit.test}</span><b className="tabular-nums">{hit.value}</b>
+            <span className="tabular-nums">{hit.ref_low != null && hit.ref_high != null ? `${hit.ref_low}–${hit.ref_high}` : ""}</span></div>}
+          {[[60, 70, 86], [46, 66, 90], [70, 72, 84], [52, 68, 88]].map(([a, b, c], i) => (
+            <div key={i} className="rd-row"><i className="rd-bar" style={{ width: `${a}%` }} /><i className="rd-bar" style={{ width: `${b}%` }} /><i className="rd-bar" style={{ width: `${c}%` }} /></div>))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Step({ n, done, title, sub, children }: { n: number; done: boolean; title: string; sub?: string; children?: ReactNode }) {
   const { t } = useTranslation();
@@ -39,13 +100,13 @@ function GetStarted({ p, greet, reload }: { p: Profile; greet: string; reload: (
   const { t } = useTranslation();
   const hasDetails = !!p.sex;
   return (
-    <div className="space-y-6">
-      <header>
+    <div className="grid gap-x-12 gap-y-6 lg:grid-cols-[1fr_20rem]">
+      <header className="rise lg:col-span-2">
         <p className="text-sm text-muted">{greet}, {p.name}</p>
         <h1 className="h-display mt-1 text-3xl md:text-4xl">{t("start.title")}</h1>
         <p className="mt-2 text-muted">{t("start.sub")}</p>
       </header>
-      <ol className="card divide-y divide-line">
+      <ol className="rise card divide-y divide-line self-start" style={{ animationDelay: "80ms" }}>
         <Step n={1} done={hasDetails} title={t("start.details")} sub={hasDetails ? [p.name, p.age != null && t("age", { n: p.age })].filter(Boolean).join(" · ") : undefined}>
           {!hasDetails && <ProfileForm p={p} onSaved={reload} />}
         </Step>
@@ -56,7 +117,8 @@ function GetStarted({ p, greet, reload }: { p: Profile; greet: string; reload: (
           {!p.abha.linked && <Link href="/abha" className="btn btn-ghost"><Icon name="link" className="h-4 w-4" />{t("nav.abha")}</Link>}
         </Step>
       </ol>
-      <p className="text-xs leading-relaxed text-muted">{t("disclaimer")}</p>
+      <div className="rise lg:pt-2" style={{ animationDelay: "160ms" }}><ReportDemo /></div>
+      <p className="text-xs leading-relaxed text-muted lg:col-span-2">{t("disclaimer")}</p>
     </div>
   );
 }
@@ -79,16 +141,14 @@ export default function Home() {
 
   return (
     <div className="space-y-10">
-      <header className="card relative flex flex-wrap items-end justify-between gap-4 overflow-hidden p-6 pb-16 md:p-8 md:pb-16">
-        <svg viewBox="0 0 400 80" preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 bottom-1 h-12 w-full text-ink opacity-25" aria-hidden>
-          <path className="ecg" d="M0 44 H120 L140 44 L155 8 L175 76 L190 44 H262 L276 44 L288 24 L300 44 H400" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <div className="relative">
+      <header className="rise flex items-start justify-between gap-4 md:items-center">
+        <div className="min-w-0">
           <p className="text-sm text-muted">{greet}</p>
-          <h1 className="h-display text-3xl md:text-4xl">{p.name}</h1>
+          <h1 className="h-display text-3xl leading-tight md:text-5xl">{p.name}</h1>
           <p className="mt-2 text-sm text-muted">{summary}</p>
+          {!editing && p.sex && <button className="btn btn-ghost mt-4" onClick={() => setEditing(true)}><Icon name="user" className="h-4 w-4" />{t("details.edit")}</button>}
         </div>
-        {!editing && p.sex && <button className="btn btn-ghost relative" onClick={() => setEditing(true)}><Icon name="user" className="h-4 w-4" />{t("details.edit")}</button>}
+        <Pile docs={docs} hit={p.latest_abnormal[0]} />
       </header>
 
       {editing || !p.sex ? (
@@ -100,7 +160,7 @@ export default function Home() {
         ) : <Block title={t("details.title")}><ProfileForm p={p} onSaved={() => { setEditing(false); reload(); }} /></Block>
       ) : null}
 
-      <section>
+      <section className="rise" style={{ animationDelay: "80ms" }}>
         <SectionTitle>{t("needsAttention")}</SectionTitle>
         {p.latest_abnormal.length === 0 ? (
           <div className="card flex items-center gap-4 p-5">
@@ -112,9 +172,10 @@ export default function Home() {
             {p.latest_abnormal.map((a, i) => {
               const f = FLAG[a.interpretation];
               return (
-                <Link key={i} href={`/documents/${a.document_id}`} className="card block p-4 transition hover:border-muted/50">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-semibold">{a.test}</h3>
+                <Link key={i} href={`/documents/${a.document_id}`} style={{ animationDelay: `${160 + i * 70}ms` }}
+                  className={`rise card block p-4 transition hover:-translate-y-0.5 hover:border-muted/50 ${f?.tone === "crit" ? "border-crit/50" : ""}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div><h3 className="font-semibold">{a.test}</h3>{a.date && <p className="text-xs text-muted">{fmtDate(a.date, i18n.language)}</p>}</div>
                     {f && <Badge tone={f.tone} icon={f.icon}>{t(f.label)}</Badge>}
                   </div>
                   <p className="h-display mt-1 text-2xl tabular-nums">{a.value} <span className="font-sans text-sm font-normal text-muted">{a.unit}</span></p>
@@ -124,32 +185,25 @@ export default function Home() {
           </div>)}
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Block title={t("currentMedicines")}>
-          {p.current_medicines.length ? (
-            <ul className="-mx-1.5 space-y-1">
-              {p.current_medicines.map((m, i) => (
-                <li key={i}><Link href={`/documents/${m.document_id}`} className="flex items-center gap-3 rounded-lg p-1.5 transition hover:bg-surface-2">
-                  <Icon name="pill" className="h-4 w-4 text-muted" />
-                  <span className="min-w-0"><span className="block truncate font-medium">{m.name}</span>
-                    <span className="block truncate text-xs text-muted">{[m.salt, m.dose_pattern].filter(Boolean).join(" · ")}</span></span>
-                </Link></li>))}
-            </ul>) : <p className="text-sm text-muted">{t("none")}</p>}
-        </Block>
-        <div className="space-y-4">
-          <Block title={t("conditions")}>{p.conditions.length ? <Chips items={p.conditions} tone="dx" icon="steth" /> : <p className="text-sm text-muted">{t("none")}</p>}</Block>
-          <Block title={t("allergies")}>{p.allergies.length ? <Chips items={p.allergies} tone="high" icon="alert" /> : <p className="text-sm text-muted">{t("none")}</p>}</Block>
-        </div>
+      <section className="rise" style={{ animationDelay: "240ms" }}>
+        <SectionTitle>{t("currentMedicines")}</SectionTitle>
+        {p.current_medicines.length ? <Schedule meds={p.current_medicines} /> : <p className="card p-5 text-sm text-muted">{t("none")}</p>}
+      </section>
+
+      <div className="rise grid gap-4 md:grid-cols-2" style={{ animationDelay: "320ms" }}>
+        <Block title={t("conditions")}>{p.conditions.length ? <Chips items={p.conditions} tone="dx" icon="steth" /> : <p className="text-sm text-muted">{t("none")}</p>}</Block>
+        <Block title={t("allergies")}>{p.allergies.length ? <Chips items={p.allergies} tone="high" icon="alert" /> : <p className="text-sm text-muted">{t("none")}</p>}</Block>
       </div>
 
-      <section>
+      <section className="rise" style={{ animationDelay: "400ms" }}>
         <SectionTitle action={<Link href="/timeline" className="text-sm font-semibold text-brand underline-offset-4 hover:underline">{t("viewAll")}</Link>}>{t("recentDocs")}</SectionTitle>
         <ul className="card divide-y divide-line overflow-hidden">
           {docs.slice(0, 5).map((d) => (
             <li key={d.id}><Link href={`/documents/${d.id}`} className="flex items-center gap-4 p-4 transition hover:bg-surface-2">
-              <Icon name={DOC_ICON[d.doc_type ?? "other"] ?? "file"} className="h-5 w-5 text-muted" />
+              {d.status === "processing" ? <Sheet scanning className="h-11 w-9 shrink-0" />
+                : <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface-2 text-muted"><Icon name={DOC_ICON[d.doc_type ?? "other"] ?? "file"} /></span>}
               <span className="min-w-0 flex-1">
-                <span className="block font-medium">{d.doc_type ? t(`docType.${d.doc_type}`) : t("docType.other")}</span>
+                <span className="block truncate font-medium">{d.doc_type ? t(`docType.${d.doc_type}`) : t("docType.other")}</span>
                 <span className="block truncate text-xs text-muted">{[fmtDate(d.doc_date ?? d.created_at, i18n.language), d.facility].filter(Boolean).join(" · ")}</span>
               </span>
               {d.status === "processing" ? <span className="flex items-center gap-1.5 text-xs text-muted"><Spinner />{t("stage.reading")}</span>

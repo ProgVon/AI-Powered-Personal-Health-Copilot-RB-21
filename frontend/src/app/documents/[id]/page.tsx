@@ -7,7 +7,7 @@ import { api, Doc, Summary } from "@/api";
 import AbnormalCard from "@/components/AbnormalCard";
 import Icon from "@/components/Icon";
 import SummaryCard from "@/components/SummaryCard";
-import { Badge, DOC_ICON, EmptyState, fmtDate, SectionTitle, Segmented, Skeleton, Spinner } from "@/components/ui";
+import { Badge, DOC_ICON, DoseStrip, EmptyState, fmtDate, SectionTitle, Segmented, Sheet, Skeleton, Spinner } from "@/components/ui";
 
 type Tab = "summary" | "data" | "original";
 
@@ -17,7 +17,7 @@ function Processing() {
   useEffect(() => { const i = setInterval(() => setStep((s) => Math.min(s + 1, 2)), 4000); return () => clearInterval(i); }, []);
   return (
     <div className="card reveal mx-auto max-w-lg space-y-5 p-8 text-center">
-      <Spinner className="mx-auto h-7 w-7 text-muted" />
+      <Sheet scanning className="mx-auto h-24 w-20" />
       <h1 className="h-display text-2xl">{t("processing.title")}</h1>
       <ol className="space-y-2 text-left text-sm">
         {(["s1", "s2", "s3"] as const).map((k, i) => (
@@ -26,7 +26,6 @@ function Processing() {
             {t(`processing.${k}`)}
           </li>))}
       </ol>
-      <div className="indeterminate relative h-1.5 overflow-hidden rounded-full bg-line" />
     </div>
   );
 }
@@ -143,8 +142,7 @@ export default function DocumentDetail() {
                       <h3 className="font-semibold">{m.brand_name}</h3>
                       <p className="text-sm text-muted">{[m.salt, m.strength].filter(Boolean).join(" · ")}</p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
-                        {m.dose_pattern && <Badge tone="med">{m.dose_pattern}</Badge>}
-                        {m.timing && <Badge>{m.timing}</Badge>}
+                        {m.dose_pattern ? <DoseStrip pattern={m.dose_pattern} timing={m.timing} /> : m.timing && <Badge>{m.timing}</Badge>}
                         {m.duration_days != null && <Badge>{m.duration_days} d</Badge>}
                       </div>
                     </div>

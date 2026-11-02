@@ -45,7 +45,7 @@ export type TimelineItem = { type: string; date: string; document_id: number; ti
 export type Profile = {
   name: string; age: number | null; abha: { number: string | null; address: string | null; linked: boolean };
   conditions: string[]; allergies: string[]; current_medicines: { name: string; salt: string | null; dose_pattern: string | null; document_id: number }[];
-  latest_abnormal: { test: string; value: string | number; unit: string | null; interpretation: string; document_id: number; ref_low: number | null; ref_high: number | null }[];
+  latest_abnormal: { test: string; value: string | number; unit: string | null; interpretation: string; date: string | null; document_id: number; ref_low: number | null; ref_high: number | null }[];
   dob: string | null; sex: string | null;
 };
 

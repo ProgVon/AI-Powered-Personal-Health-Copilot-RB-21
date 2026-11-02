@@ -55,15 +55,15 @@ export default function Abha() {
         <p className="mt-1 max-w-xl text-muted">{t("abhaSub")}</p>
       </header>
 
-      <div className="card reveal relative overflow-hidden p-6 md:p-8">
+      <div className="reveal relative overflow-hidden rounded-2xl bg-brand p-6 text-on-brand shadow-card md:p-8">
         <div className="relative flex items-start justify-between">
-          <div><p className="text-xs font-semibold uppercase tracking-[.2em] text-muted">{t("yourAbha")}</p>
+          <div><p className="text-xs font-semibold uppercase tracking-[.2em] opacity-75">{t("yourAbha")}</p>
             <p className="h-display mt-1 text-xl font-semibold">{profile?.name}</p></div>
-          <Icon name="shield" className="h-8 w-8 text-muted" strokeWidth={1.4} />
+          <Icon name="shield" className="h-8 w-8 opacity-75" strokeWidth={1.4} />
         </div>
         <p className="relative mt-8 font-mono text-2xl tracking-widest md:text-3xl">{pending || "••-••••-••••-••••"}</p>
         <div className="relative mt-5">
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${linked ? "bg-ok-soft text-ok" : "bg-surface-2 text-muted ring-1 ring-line"}`}>
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${linked ? "bg-on-brand text-brand-strong" : "ring-1 ring-on-brand/40"}`}>
             <Icon name={linked ? "check" : "link"} className="h-3.5 w-3.5" strokeWidth={2.4} />
             {linked ? t("abhaLinked") : pending ? t("abhaPending") : t("notSet")}
           </span>
@@ -93,7 +93,7 @@ export default function Abha() {
       {step === 1 && (
         <form className="card reveal space-y-4 p-6" onSubmit={(e) => { e.preventDefault(); verify(); }}>
           {demo && <p className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface-2 p-3 text-sm">
-            <Badge tone="brand" icon="sparkles">{t("demoOtp")}</Badge><code className="font-mono text-base font-bold tracking-widest">{demo}</code>
+            <Badge tone="brand" icon="lightbulb">{t("demoOtp")}</Badge><code className="font-mono text-base font-bold tracking-widest">{demo}</code>
             <button type="button" className="ml-auto text-sm font-semibold text-brand underline" onClick={() => setOtp(demo)}>{t("useDemo")}</button></p>}
           <label className="block"><span className="mb-1.5 block text-sm font-semibold">{t("otp")}</span>
             <input className="input text-center font-mono text-xl tracking-[.5em]" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}

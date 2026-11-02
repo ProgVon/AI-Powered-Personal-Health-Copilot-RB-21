@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import Icon, { IconName } from "./Icon";
 
 type Tone = "ok" | "low" | "high" | "crit" | "brand" | "med" | "dx" | "neutral";
@@ -24,6 +25,46 @@ export function Badge({ tone = "neutral", icon, children }: { tone?: Tone; icon?
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${TONE[tone]}`}>
       {icon && <Icon name={icon} className="h-3.5 w-3.5" strokeWidth={2.2} />}{children}
+    </span>
+  );
+}
+
+// A page with a scan line passing over it: the app is reading a document.
+export const Sheet = ({ scanning = false, className = "h-20 w-16" }: { scanning?: boolean; className?: string }) => (
+  <div aria-hidden className={`${scanning ? "scan" : ""} relative space-y-1.5 overflow-hidden rounded-md border border-line bg-surface p-2.5 shadow-card ${className}`}>
+    {[70, 90, 55, 80, 45, 65].map((w, i) => <i key={i} className="block h-1 rounded-full bg-line" style={{ width: `${w}%` }} />)}
+  </div>
+);
+
+// "1-0-1 after food" as morning/afternoon/night slots. Same pattern and slot names as backend/app/rules/dosage.py.
+const DASH = /[\d½¼¾.]+(?:\s*[-–]\s*[\d½¼¾.]+){1,3}/;
+const SLOTS: Record<number, string[]> = { 2: ["morning", "night"], 3: ["morning", "afternoon", "night"], 4: ["morning", "afternoon", "evening", "night"] };
+
+// Doses per slot from a dash pattern, or null for "BD", "सुबह-शाम" and other forms shown as written.
+export function parseDose(pattern: string) {
+  const m = DASH.exec(pattern);
+  const doses = m ? m[0].split(/\s*[-–]\s*/) : [];
+  const slots = SLOTS[doses.length];
+  if (!m || !slots) return null;
+  return { slots, doses, on: doses.map((d) => Number(d.replace(/[½¼¾]/, "1")) > 0),
+    rest: (pattern.slice(0, m.index) + pattern.slice(m.index + m[0].length)).trim() };
+}
+
+// `timing` is the backend's "morning, night, after food": the slots are drawn, the rest is shown beside them.
+export function DoseStrip({ pattern, timing }: { pattern: string; timing?: string | null }) {
+  const { t } = useTranslation();
+  const d = parseDose(pattern);
+  if (!d) return <><Badge tone="med">{pattern}</Badge>{timing && <Badge>{timing}</Badge>}</>;
+  const { slots, doses, on } = d;
+  const rest = timing ? timing.split(", ").filter((x) => !slots.includes(x)).join(", ") : d.rest;
+  const label = [...slots.filter((_, i) => on[i]).map((s) => t(`dose.${s}`)), rest].filter(Boolean).join(", ");
+  return (
+    <span role="img" aria-label={label} className="flex flex-wrap items-center gap-1">
+      {slots.map((s, i) => (
+        <span key={s} className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${on[i] ? "bg-brand-soft text-brand-strong" : "border border-dashed border-line text-muted/70"}`}>
+          {t(`dose.${s}`)}{on[i] && doses[i] !== "1" && ` ×${doses[i]}`}
+        </span>))}
+      {rest && <span className="ml-1 text-xs text-muted">{rest}</span>}
     </span>
   );
 }

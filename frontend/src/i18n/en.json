@@ -3,7 +3,7 @@
   "nav": {"home": "Home", "upload": "Upload", "timeline": "Timeline", "abha": "ABHA"},
   "greet": {"morning": "Good morning", "afternoon": "Good afternoon", "evening": "Good evening"}, "age": "Age {{n}}",
   "needsAttention": "Needs attention", "allClear": "All clear", "allClearSub": "No results outside the usual range.",
-  "currentMedicines": "Current medicines", "conditions": "Conditions", "allergies": "Allergies", "none": "None recorded",
+  "now": "Now", "asPrescribed": "As prescribed", "currentMedicines": "Current medicines", "conditions": "Conditions", "allergies": "Allergies", "none": "None recorded",
   "recentDocs": "Recent documents", "viewAll": "View timeline",
   "uploadTitle": "Upload medical documents", "uploadSub": "Photos, scans or PDFs. Handwritten and bilingual are fine.",
   "dropHere": "Drop files here", "chooseFiles": "Choose files", "takePhoto": "Take a photo", "limits": "JPG, PNG or PDF · up to 15 MB each",
@@ -43,7 +43,8 @@
   "detailsNudge": "Add your sex and date of birth so results are checked against the right ranges.", "addDetails": "Add details",
   "dropOr": "Drag files here, or",
   "start": {"title": "Let's get you set up", "sub": "Three quick steps. Only the first two matter to start.", "details": "Your details", "upload": "Upload your first document", "uploadSub": "A prescription or lab report. A phone photo is fine.", "abha": "Link your ABHA", "abhaSub": "Optional. Pull records from hospitals and labs.", "done": "Done"},
-  "intro": {"title": "Your medical records, in words you understand.", "s1": "Photograph a prescription or lab report", "s2": "Read what it says in plain language", "s3": "Keep a timeline and share it through ABHA"},
+  "intro": {"title": "Your medical records, in words you understand.", "report": "Complete blood count", "alt": "Example: a photographed lab report is read, a low haemoglobin value is flagged, and it is explained in plain words.", "explain": "Haemoglobin is a little below the usual range. It carries oxygen in your blood, so a low value can leave you feeling tired. Ask your doctor what may be causing it."},
+  "dose": {"morning": "Morning", "afternoon": "Afternoon", "evening": "Evening", "night": "Night"},
   "auth": {
     "mode": "Sign up or log in", "signup": "Sign up", "login": "Log in", "logout": "Log out",
     "signupTitle": "Create your account", "loginTitle": "Welcome back", "checkEmail": "Check your email",

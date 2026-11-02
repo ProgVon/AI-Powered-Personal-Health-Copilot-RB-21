@@ -8,6 +8,7 @@ import WhatsNew from "./components/WhatsNew";
 import { ToastProvider } from "./components/Toast";
 import Icon, { IconName } from "./components/Icon";
 import Login from "./components/Login";
+import ReportDemo from "./components/ReportDemo";
 import { EmptyState, Segmented, Spinner } from "./components/ui";
 import { LANGS, Lang } from "./i18n";
 
@@ -115,32 +116,23 @@ function Layout({ children }: { children: ReactNode }) {
   );
 }
 
-function Intro() {
+// Logged out: phones get the form before the demo, wide screens put the demo under the headline.
+function Welcome({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation();
   return (
-    <section className="space-y-6">
+    <div className="app-shell mx-auto grid min-h-screen max-w-5xl content-center gap-8 px-4 py-8 md:grid-cols-[1fr_26rem] md:gap-x-16 md:px-10">
+      <div className="flex items-center justify-between md:col-span-2"><Logo /><Controls /></div>
       <h1 className="h-display max-w-md text-3xl leading-tight md:text-5xl">{t("intro.title")}</h1>
-      <ol className="hidden space-y-4 md:block">
-        {(["s1", "s2", "s3"] as const).map((k, i) => (
-          <li key={k} className="flex items-baseline gap-4">
-            <span className="h-display w-5 shrink-0 text-lg text-muted tabular-nums">{i + 1}</span><span>{t(`intro.${k}`)}</span>
-          </li>))}
-      </ol>
-      <p className="hidden max-w-md border-t border-line pt-4 text-xs leading-relaxed text-muted md:block">{t("disclaimer")}</p>
-    </section>
+      <div className="md:col-start-2 md:row-span-2 md:row-start-2 md:self-center"><Login onDone={onDone} /></div>
+      <section className="space-y-6">
+        <ReportDemo />
+        <p className="max-w-md border-t border-line pt-4 text-xs leading-relaxed text-muted">{t("disclaimer")}</p>
+      </section>
+    </div>
   );
 }
 
 export default function Shell({ children }: { children: ReactNode }) {
   const [authed, setAuthed] = useState(() => !!getToken());
-  return (
-    <ToastProvider>
-      {authed ? <Layout>{children}</Layout> : (
-        <div className="app-shell mx-auto grid min-h-screen max-w-5xl content-center gap-10 px-4 py-8 md:grid-cols-[1fr_26rem] md:items-center md:gap-16 md:px-10">
-          <div className="flex items-center justify-between md:col-span-2"><Logo /><Controls /></div>
-          <Intro />
-          <Login onDone={() => setAuthed(true)} />
-        </div>)}
-    </ToastProvider>
-  );
+  return <ToastProvider>{authed ? <Layout>{children}</Layout> : <Welcome onDone={() => setAuthed(true)} />}</ToastProvider>;
 }

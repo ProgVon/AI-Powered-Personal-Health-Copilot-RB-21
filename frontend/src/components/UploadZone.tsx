@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../api";
 import Icon from "./Icon";
 import { useToast } from "./Toast";
-import { Spinner } from "./ui";
+import { Sheet, Spinner } from "./ui";
 
 type Stage = "uploading" | "reading" | "done" | "failed";
 type Item = { key: string; name: string; size: number; preview?: string; id?: number; stage: Stage; error?: string; busy?: boolean };
@@ -57,7 +57,7 @@ export default function UploadZone() {
         className={`reveal relative overflow-hidden rounded-xl border-2 border-dashed p-8 text-center transition md:p-12
           ${over ? "border-brand bg-surface-2" : "border-line bg-surface"}`}>
         <div className="relative flex flex-col items-center gap-4">
-          <Icon name="upload" className={`h-8 w-8 transition ${over ? "text-brand" : "text-muted"}`} strokeWidth={1.6} />
+          <Sheet scanning={over} />
           <div>
             <p className="h-display text-xl">{over ? t("dropHere") : t("dropOr")}</p>
             <p className="mt-1 text-sm text-muted">{t("uploadSub")}</p>
@@ -78,7 +78,7 @@ export default function UploadZone() {
         <ul className="space-y-3">
           {items.map((i) => (
             <li key={i.key} className="card reveal flex items-center gap-4 p-3">
-              <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-surface-2 text-muted">
+              <div className={`${i.stage === "uploading" || i.stage === "reading" ? "scan" : ""} relative grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-surface-2 text-muted`}>
                 {i.preview ? <img src={i.preview} alt="" className="h-full w-full object-cover" /> : <Icon name="file" className="h-6 w-6" />}
               </div>
               <div className="min-w-0 flex-1">
@@ -88,8 +88,7 @@ export default function UploadZone() {
                   <div className="mt-2 flex items-center gap-2 text-sm text-muted">
                     <Spinner /><span>{t(`stage.${i.stage}`)}</span>
                   </div>)}
-                {i.stage === "uploading" || i.stage === "reading"
-                  ? <div className="indeterminate relative mt-2 h-1.5 overflow-hidden rounded-full bg-line" />
+                {i.stage === "uploading" || i.stage === "reading" ? null
                   : i.stage === "failed"
                     ? <p role="alert" className="mt-1.5 flex items-center gap-1.5 text-sm text-crit"><Icon name="alert" className="h-4 w-4" />{i.error ?? t("failedSub")}</p>
                     : <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-ok"><span className="pop"><Icon name="check" className="h-4 w-4" strokeWidth={2.6} /></span>{t("ready")}</p>}

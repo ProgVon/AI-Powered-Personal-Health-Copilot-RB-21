@@ -14,7 +14,7 @@ export default function SummaryCard({ s, observations }: { s: Summary; observati
   return (
     <div className="space-y-8">
       <section className="card reveal relative overflow-hidden p-6 md:p-8">
-        <Badge tone="brand" icon="sparkles">{t("aiSummary")}</Badge>
+        <Badge tone="brand" icon="message">{t("aiSummary")}</Badge>
         <h2 className="h-display relative mt-3 text-2xl leading-snug md:text-3xl">{s.headline}</h2>
         {s.key_points.length > 0 && (
           <ul className="relative mt-5 space-y-2.5">
