@@ -22,7 +22,7 @@ def _dose(entry: str) -> float:
 
 def parse_dose(pattern: str | None) -> dict:
     """'1-0-1' -> per_day 2, timing 'morning, night'. Unknown input -> all None."""
-    out = {"per_day": None, "timing": None, "as_needed": False}
+    out = {"per_day": None, "timing": None}
     if not pattern:
         return out
     text = pattern.lower()
@@ -41,8 +41,6 @@ def parse_dose(pattern: str | None) -> dict:
         freq = next((T["frequency"][w] for w in words if w in T["frequency"]), None)
         slots = [s for s, terms in T["slots"].items() if _has(text, terms)]
         out["per_day"] = freq or len(slots) or None
-    if _has(text, T["as_needed"]):
-        out["as_needed"] = True
     food = food_timing(text)
     out["timing"] = ", ".join(slots + ([food] if food else [])) or None
     return out

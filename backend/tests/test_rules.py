@@ -1,8 +1,8 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import pytest
 
-from app.models import Medication
+from app.models import Document, Medication
 from app.ingestion.normalize import normalize_lab, normalize_medication, normalize_record, parse_range
 from app.rules import dosage, formulary, lab_catalog as labs, safety_text
 
@@ -16,10 +16,6 @@ from app.rules import dosage, formulary, lab_catalog as labs, safety_text
 def test_dose(p, per_day, timing):
     r = dosage.parse_dose(p)
     assert (r["per_day"], r["timing"]) == (per_day, timing)
-
-
-def test_dose_as_needed():
-    assert dosage.parse_dose("SOS")["as_needed"] and dosage.parse_dose("PRN")["as_needed"]
 
 
 @pytest.mark.parametrize("t,d", [("5 days", 5), ("2 weeks", 14), ("1 month", 30), ("continue", None),
@@ -86,6 +82,18 @@ def test_parse_range(t, r):
     assert parse_range(t) == r
 
 
+@pytest.mark.parametrize("t", ["Desirable < 200, Borderline 200-239, High >= 240", "Low < 40, High > 60",
+                               "Deficient < 20, Insufficient 20-29, Sufficient 30-100"])
+def test_banded_ranges_leave_it_to_the_catalog(t):
+    assert parse_range(t, "male") == (None, None)
+
+
+def test_banded_range_does_not_flag_a_healthy_value():
+    lab = {"test_name": "Total Cholesterol", "value": "180", "unit": "mg/dL",
+           "ref_range": "Desirable < 200, Borderline 200-239, High >= 240"}
+    assert normalize_lab(lab, "male")["interpretation"] == "N"  # was "L" against a 200-239 "range"
+
+
 def test_parse_range_picks_the_persons_sex():
     t = "Male: 13.0-17.0 Female: 12.0-15.0"
     assert parse_range(t, "female") == (12, 15) and parse_range(t, "male") == (13, 17)
@@ -107,6 +115,17 @@ def test_formulary():
     assert formulary.match("Zzzqx") is None
 
 
+@pytest.mark.parametrize("name", ["Thyronorm 25", "Telma 80", "Atorva 40", "Glycomet GP 2", "Concor 2.5", "Telma AM"])
+def test_formulary_never_swaps_strength_or_variant(name):
+    assert formulary.match(name) is None  # a near-miss is another product: keep what the prescription says
+
+
+def test_lab_lookup_keeps_related_tests_apart():
+    assert labs.find("VLDL Cholesterol") is None and labs.find("Non-HDL Cholesterol") is None
+    assert labs.find("HDL Cholestrol")["canonical_name"] == "HDL Cholesterol"  # typos still match
+    assert labs.find("25-OH Vitamin D3")["canonical_name"] == "Vitamin D"
+
+
 def test_medication_normalize():
     m = normalize_medication({"name": "Dolo 650", "dose_pattern": "1-0-1", "timing": "after food",
                               "duration": "5 days", "confidence": 0.9}, date(2026, 1, 1), "Dr X")
@@ -122,6 +141,10 @@ def test_medication_current():
     assert Medication(start_date=today - timedelta(days=30)).current  # no duration: recent counts
     assert not Medication(start_date=today - timedelta(days=200)).current  # no duration: old course drops off
     assert Medication().current  # undated: can't tell, so keep it listed
+    uploaded = lambda days: Document(created_at=datetime.now() - timedelta(days=days))
+    assert not Medication(document=uploaded(200)).current  # unreadable date: counts from the upload
+    assert Medication(document=uploaded(3), duration_days=5).current
+    assert not Medication(document=uploaded(10), duration_days=5).current
 
 
 def test_record_warnings():

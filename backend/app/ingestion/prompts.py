@@ -7,7 +7,7 @@ Rules:
 - Keep original units exactly as printed.
 - Dates in ISO format (YYYY-MM-DD). Indian documents use DD/MM/YYYY.
 - Treat the text layer below as ground truth for printed text; use the images for layout and handwriting.
-- Handle Hindi and other regional scripts and mixed-language documents. Report the languages you see.
+- Handle Hindi and other regional scripts and mixed-language documents.
 
 Text layer:
 {text_layer}"""

@@ -19,7 +19,6 @@ class LabResult(BaseModel):
     value: str  # string: "<0.5", "Positive", "7.8"
     unit: str | None = None
     ref_range: str | None = None
-    flag_on_report: str | None = None
     source_text: str
     confidence: float = Field(ge=0, le=1)
 
@@ -44,8 +43,6 @@ class DocumentExtraction(BaseModel):
     allergies: list[str] = []
     impression: str | None = None  # imaging findings
     follow_up: str | None = None
-    languages_detected: list[str] = []
-    handwritten: bool = False
 
 
 class AbnormalExplanation(BaseModel):

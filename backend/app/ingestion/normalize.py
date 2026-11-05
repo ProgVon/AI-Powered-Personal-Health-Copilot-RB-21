@@ -60,6 +60,9 @@ def parse_range(text: str | None, sex: str | None = None) -> tuple[float | None,
 
 
 def _range(t: str) -> tuple[float | None, float | None]:
+    # bands like "Desirable < 200, Borderline 200-239, High >= 240" aren't one normal range: let the catalog decide
+    if len(re.findall(RANGE, t)) + len(re.findall(r"[<>]|\bup\s*to\b|\bupto\b", t, re.I)) > 1:
+        return None, None
     if m := re.search(RANGE, t):
         return float(m[1]), float(m[2])
     if m := re.search(rf"(?:<=?|up\s*to|upto)\s*({NUM})", t, re.I):
@@ -118,7 +121,7 @@ def normalize_medication(m: dict, start: date | None, prescriber: str | None) ->
             "strength": m.get("strength") or (hit["strength"] if hit else None) or None,
             "form": m.get("form") or (hit["form"] if hit else None),
             "dose_pattern": m.get("dose_pattern"), "per_day": parsed["per_day"], "timing": timing,
-            "as_needed": parsed["as_needed"], "duration_days": days, "start_date": start,
+            "duration_days": days, "start_date": start,
             "end_date": start + timedelta(days=days) if start and days else None,
             "prescriber": prescriber, "confidence": m.get("confidence")}
 

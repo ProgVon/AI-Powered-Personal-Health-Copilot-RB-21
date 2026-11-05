@@ -64,7 +64,7 @@ class Document(Base):  # FHIR DocumentReference + Composition
     source: Mapped[str] = mapped_column(String, default="upload")  # upload | abdm
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     observations: Mapped[list["Observation"]] = relationship(cascade=CASCADE)
-    medications: Mapped[list["Medication"]] = relationship(cascade=CASCADE)
+    medications: Mapped[list["Medication"]] = relationship(cascade=CASCADE, back_populates="document")
     conditions: Mapped[list["Condition"]] = relationship(cascade=CASCADE)
     allergies: Mapped[list["Allergy"]] = relationship(cascade=CASCADE)
 
@@ -104,12 +104,17 @@ class Medication(Base):
     end_date: Mapped[date | None]
     prescriber: Mapped[str | None]
     confidence: Mapped[float | None] = mapped_column(Float)
+    document: Mapped["Document"] = relationship(back_populates="medications")
 
     @property
     def current(self) -> bool:
         # shortcut: "continue" and an unreadable duration both leave end_date empty, so either counts as current
         # for 90 days after the start; store "ongoing" separately if long-term medicines must stay listed
-        end = self.end_date or (self.start_date + OPEN_ENDED if self.start_date else None)
+        # an unreadable prescription date counts from the upload, so an old course can't stay listed forever
+        uploaded = self.document.created_at if self.document and self.document.created_at else None
+        start = self.start_date or (uploaded.date() if uploaded else None)
+        length = timedelta(days=self.duration_days) if self.duration_days else OPEN_ENDED
+        end = self.end_date or (start + length if start else None)
         return end is None or end >= date.today()
 
 

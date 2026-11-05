@@ -131,8 +131,9 @@ flowchart TD
     B -. "2nd failure" .-> X([❌ failed + reason])
 ```
 
-- **Restarts:** a document cut off by a server restart is marked failed and the page offers **Rescan**,
-  which clears any half-saved rows and reads it again.
+- **Restarts:** a document cut off mid-read by a server restart is marked failed and the page offers **Rescan**,
+  which clears any half-saved rows and reads it again. One cut off while its summary was being written already has
+  its data saved, so only the summary is rebuilt at startup.
 - **Large pages:** scanned PDF pages and photos are rendered at most 2048 px on the long edge, so one
   oversized page can't exhaust the server's memory.
 - **Changed details:** saving a new sex, date of birth or name recomputes flags and warnings for every
@@ -336,6 +337,12 @@ python -m eval.make_samples  # regenerate the 6 synthetic documents + their answ
 
 ## 📝 Recent changes
 
+- **Accuracy fixes:** reports that print several bands ("Desirable < 200, Borderline 200-239…") now use the catalogue
+  range instead of flagging healthy values; brand and test matching no longer turns "Thyronorm 25" into Thyronorm 50
+  or "VLDL" into LDL; an abnormal value the summary model renamed or skipped still gets an explanation; critical
+  values keep fixed wording in Hindi and Telugu too; saving your details twice in a row always applies the latest.
+- **Reliability & security:** a restart mid-summary rebuilds the summary instead of failing the document; wrong login
+  codes are capped per account across resent codes; medicines from undated prescriptions drop off after 90 days.
 - **Home dashboard:** restyled to match the login page. The green banner is replaced by a pile of your latest reports
   with the first out-of-range value marked (a scan line runs over it while a document is being read). Sections fade in
   one after another, range markers slide out of the normal band to the value, and today's medicines are grouped by

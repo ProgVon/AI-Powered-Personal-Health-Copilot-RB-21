@@ -4,6 +4,7 @@ import time
 import uuid
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 from fhir.resources.R4B.bundle import Bundle
 from PIL import Image
@@ -194,6 +195,31 @@ def test_summary_without_llm_keeps_critical_warning(monkeypatch):
     assert len(out["abnormal_explanations"]) == 2  # Potassium once, plus Haemoglobin
 
 
+def test_renamed_or_skipped_explanation_is_backfilled(monkeypatch):
+    renamed = SUMMARY.model_copy(update={"abnormal_explanations": [
+        SUMMARY.abnormal_explanations[0].model_copy(update={"test": "Hemoglobin (Hb)"})]})
+    monkeypatch.setattr(summarize, "structured", lambda *a: FakeLLM(renamed))
+    out = summarize.build_summary(normalize_record(EXTRACTION.model_dump(), "", None, None)[0])
+    assert [e["test"] for e in out["abnormal_explanations"]] == ["Potassium", "Haemoglobin"]  # none left out
+
+
+def test_translation_keeps_fixed_critical_message(monkeypatch):
+    def down(*_):
+        raise RuntimeError("api down")
+    monkeypatch.setattr(summarize, "structured", down)
+    src = summarize.build_summary(normalize_record(EXTRACTION.model_dump(), "", None, None)[0])
+    model_prose = Summary.model_validate({**src, "abnormal_explanations": [
+        {**e, "what_it_means": "model wording"} for e in src["abnormal_explanations"]]})
+    monkeypatch.setattr(summarize, "structured", lambda *a: FakeLLM(model_prose))
+    out = summarize.translate_summary(src, "te")
+    assert out["abnormal_explanations"][0]["what_it_means"] == summarize.CRITICAL_MSG_I18N["te"]  # Potassium
+    assert out["abnormal_explanations"][1]["what_it_means"] == "model wording"
+    short = model_prose.model_copy(update={"abnormal_explanations": model_prose.abnormal_explanations[1:]})
+    monkeypatch.setattr(summarize, "structured", lambda *a: FakeLLM(short))
+    with pytest.raises(ValueError):  # a translation that dropped the critical result is never shown
+        summarize.translate_summary(src, "hi")
+
+
 def test_extraction_failure_marks_failed(monkeypatch):
     calls = []
 
@@ -250,6 +276,9 @@ def test_otp_and_rate_limits(monkeypatch):
         for _ in range(5):
             assert c.post("/auth/verify", json={"email": "tom@x.com", "otp": wrong}).json()["detail"] == "Wrong code"
         assert c.post("/auth/verify", json={"email": "tom@x.com", "otp": code}).status_code == 401  # tries used up
+
+        c.post("/auth/forgot", json={"email": "tom@x.com"})  # a fresh code doesn't bring fresh guesses
+        assert c.post("/auth/verify", json={"email": "tom@x.com", "otp": SENT["tom@x.com"]}).status_code == 429
 
         auth_router._hits.clear()
         for _ in range(5):
@@ -328,11 +357,31 @@ def test_restart_mid_summary_can_be_rescanned_without_duplicates(monkeypatch):
             async with lifespan(app):
                 pass
         asyncio.run(restart())
+        d = c.get(f"/documents/{did}").json()  # summary rebuilt from the saved reading: no Rescan, no new read
+        assert d["status"] == "done" and d["summary"] and len(d["observations"]) == 2  # rows replaced, not doubled
+        assert d["extraction"]["lab_results"]  # the reading is kept
+        c.delete("/profile")
+
+
+def test_restart_mid_read_offers_rescan(monkeypatch):
+    import asyncio
+    monkeypatch.setattr(graph, "structured", lambda *a: FakeLLM(EXTRACTION))
+    monkeypatch.setattr(summarize, "structured", lambda *a: FakeLLM(SUMMARY))
+    with TestClient(app, headers=_visit()) as c:
+        did = c.post("/documents", files={"file": ("a.png", _png(), "image/png")}).json()["id"]
+        with summarize.SessionLocal() as db:
+            db.get(Document, did).status = "processing"
+            db.commit()
+
+        async def restart():
+            async with lifespan(app):
+                pass
+        asyncio.run(restart())
         d = c.get(f"/documents/{did}").json()
         assert d["status"] == "failed" and d["extraction"]["_busy"] is True  # page shows Rescan
         assert c.post(f"/documents/{did}/rescan").status_code == 200
         d = c.get(f"/documents/{did}").json()
-        assert d["status"] == "done" and d["summary"] and len(d["observations"]) == 2  # old rows replaced, not doubled
+        assert d["status"] == "done" and len(d["observations"]) == 2  # old rows replaced, not doubled
         c.delete("/profile")
 
 
@@ -381,6 +430,27 @@ def test_saving_sex_reflags_earlier_reports(monkeypatch):
         assert d["status"] == "done" and d["summary"]["abnormal_explanations"][0]["test"] == "Haemoglobin"  # rebuilt
         c.put("/profile", json={"name": "Ravi Kumar"})  # the name check also runs on old reports
         assert any("seems to be for Sunita Devi" in w for w in c.get(f"/documents/{did}").json()["extraction"]["_warnings"])
+        c.delete("/profile")
+
+
+def test_second_save_during_resummary_wins(monkeypatch):
+    lab = EXTRACTION.model_copy(update={"lab_results": [EXTRACTION.lab_results[0].model_copy(
+        update={"value": "12.5", "ref_range": "Male: 13.0-17.0 Female: 12.0-15.0"})]})
+    monkeypatch.setattr(graph, "structured", lambda *a: FakeLLM(lab))
+    monkeypatch.setattr(summarize, "structured", lambda *a: FakeLLM(SUMMARY))
+    with TestClient(app, headers=_visit()) as c:
+        did = c.post("/documents", files={"file": ("a.png", _png(), "image/png")}).json()["id"]
+        hb = lambda: c.get(f"/documents/{did}").json()["observations"][0]["interpretation"]
+        jobs = []  # hold the summary jobs, as if the model were still writing them
+        monkeypatch.setattr(graph.INGEST, "submit", lambda fn, *a: jobs.append((fn, a)))
+        c.put("/profile", json={"sex": "male"})
+        assert hb() == "L"
+        c.put("/profile", json={"sex": "female"})  # corrected a few seconds later
+        assert hb() == "N"  # the document mid-summary is re-checked too
+        for fn, a in reversed(jobs):  # worst order: the stale job finishes last
+            fn(*a)
+        d = c.get(f"/documents/{did}").json()
+        assert d["status"] == "done" and d["summary"]["abnormal_explanations"] == []  # not the "male" summary
         c.delete("/profile")
 
 

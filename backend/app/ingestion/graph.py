@@ -5,6 +5,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 from langchain_core.messages import HumanMessage
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -15,7 +16,7 @@ from .normalize import normalize, normalize_record, person
 from .prepare import prepare
 from .prompts import EXTRACT_PROMPT
 from .schemas import DocumentExtraction
-from .summarize import summarize
+from .summarize import flags, summarize
 
 log = logging.getLogger(__name__)
 # own threads, so slow model calls can't take the request thread pool; also caps parallel LLM calls
@@ -48,7 +49,7 @@ def persist(state):
         ids = {"profile_id": pid, "document_id": did}
         db.add_all(_observations(rec, ids))
         for m in rec["medications"]:
-            db.add(Medication(**ids, **{k: v for k, v in m.items() if k != "as_needed"}))
+            db.add(Medication(**ids, **m))
         db.add_all(Condition(**ids, **c) for c in rec["conditions"])
         db.add_all(Allergy(**ids, **a) for a in rec["allergies"])
         doc.status = "summarizing"  # results are visible now; the summary follows
@@ -60,22 +61,36 @@ def _observations(rec: dict, ids: dict) -> list[Observation]:
     return [Observation(**ids, **{k: v for k, v in o.items() if k != "explainer"}) for o in rec["observations"]]
 
 
+def _recheck(doc: Document, who: tuple) -> tuple[dict, bool]:
+    """Recompute one upload's flags and warnings from its saved extraction (no LLM).
+    Returns its summarize() state and whether any flag moved."""
+    record, warnings = normalize_record(doc.extraction, *who)
+    ids = {"profile_id": doc.profile_id, "document_id": doc.id}
+    old = flags(doc)
+    doc.observations[:] = _observations(record, ids)  # delete-orphan removes the old rows
+    doc.extraction = {**doc.extraction, "_warnings": warnings}
+    return {"record": record, **ids}, [o["interpretation"] for o in record["observations"]] != old
+
+
 def reflag(db: Session, p: Profile) -> list[dict]:
-    """Profile details changed: recompute every upload's flags and warnings from its saved extraction (no LLM).
-    Returns summarize() states for the documents whose flags moved; the caller commits and runs them."""
+    """Profile details changed: re-check every read upload. Returns summarize() states for the documents whose
+    flags moved; the caller commits and runs them."""
     who, redo = person(p), []
     for doc in p.documents:
-        if doc.source != "upload" or doc.status != "done" or not doc.extraction:
+        # "summarizing" too: a second save while the first one's summary is being written must still apply
+        if doc.source != "upload" or doc.status not in ("done", "summarizing") or not doc.extraction:
             continue
-        record, warnings = normalize_record(doc.extraction, *who)
-        ids = {"profile_id": p.id, "document_id": doc.id}
-        old = [o.interpretation for o in sorted(doc.observations, key=lambda o: o.id)]
-        doc.observations[:] = _observations(record, ids)  # delete-orphan removes the old rows
-        doc.extraction = {**doc.extraction, "_warnings": warnings}
-        if [o["interpretation"] for o in record["observations"]] != old:
+        state, moved = _recheck(doc, who)
+        if moved:
             doc.status = "summarizing"  # the old summary explains the old flags
-            redo.append({"record": record, **ids})
+            redo.append(state)
     return redo
+
+
+def resume(db: Session) -> list[dict]:
+    """Startup: a document cut off while summarizing has all its rows, so only its summary is rebuilt (no new read)."""
+    return [_recheck(d, person(db.get(Profile, d.profile_id)))[0]
+            for d in db.scalars(select(Document).where(Document.status == "summarizing"))]
 
 
 def _extract_retrying(state):

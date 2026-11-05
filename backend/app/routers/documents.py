@@ -33,12 +33,12 @@ def doc_brief(d: Document) -> dict:
             "status": d.status, "source": d.source, "created_at": d.created_at}
 
 
-@router.post("")
-async def upload(file: UploadFile, bg: BackgroundTasks, p: Profile = Depends(current_profile),
-                 db: Session = Depends(get_db)):
+@router.post("")  # plain def: the database and disk writes run in the thread pool, not on the event loop
+def upload(file: UploadFile, bg: BackgroundTasks, p: Profile = Depends(current_profile),
+           db: Session = Depends(get_db)):
     if file.content_type not in EXT:
         raise HTTPException(415, "Only JPG, PNG or PDF files are accepted")
-    data = await file.read(MAX_BYTES + 1)  # never hold more than the cap in memory
+    data = file.file.read(MAX_BYTES + 1)  # never hold more than the cap in memory
     if len(data) > MAX_BYTES:
         raise HTTPException(413, "File is larger than 15 MB")
     doc = Document(profile_id=p.id, mime=file.content_type, status="processing", source="upload")

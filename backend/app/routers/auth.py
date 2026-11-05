@@ -18,6 +18,7 @@ OTP_TTL = timedelta(minutes=10)
 RESEND_AFTER = timedelta(seconds=30)
 MAX_TRIES = 5
 WINDOW, PER_IP, PER_ACCOUNT = 15 * 60, 20, 5  # code requests / login attempts per 15 minutes
+WRONG_CODES = ((WINDOW, 5), (24 * 3600, 20))  # wrong codes per account across every code sent: per 15 min, per day
 log = logging.getLogger(__name__)
 DUMMY_HASH = auth.hash_password(secrets.token_hex())  # unknown logins take as long as wrong passwords
 _hits: dict[str, list[float]] = {}  # shortcut: per process, move to the DB if you run more than one backend instance
@@ -120,7 +121,13 @@ def _check_otp(db: Session, body: Verify) -> Account:
     db.commit()
     if not counted:
         raise expired
+    # MAX_TRIES alone resets with each new code, so asking for codes again and again would allow endless guessing
+    key, now = f"otp:{acc.id}", time.monotonic()
+    wrong = [t for t in _hits.get(key, []) if now - t < WRONG_CODES[-1][0]]
+    if any(sum(now - t < span for t in wrong) >= cap for span, cap in WRONG_CODES):
+        raise HTTPException(429, "Too many wrong codes, please try again later")
     if not hmac.compare_digest(acc.otp_hash, auth.hash_otp(body.otp)):
+        _hits[key] = wrong + [now]
         raise HTTPException(401, "Wrong code")
     # only wrong guesses use up tries; forgot-password checks the right code twice (Verify, then Save)
     db.execute(update(Account).where(Account.id == acc.id).values(otp_tries=Account.otp_tries - 1))
